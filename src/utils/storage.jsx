@@ -567,40 +567,84 @@ export const deleteLesson = async (lessonId) => {
 // MULTIMEDIA MANAGEMENT FUNCTIONS
 // ============================================
 
-// ✅ Add multimedia to lesson
+// src/utils/storage.jsx - Updated Multimedia Functions
+
+// ✅ Add multimedia to lesson - IMPROVED
 export const addMultimediaToLesson = async (lessonId, multimediaData) => {
   try {
-    const multimediaRef = collection(db, 'multimedia');
-    const docRef = await addDoc(multimediaRef, {
-      ...multimediaData,
+    // Validate inputs
+    if (!lessonId) {
+      throw new Error('Lesson ID is required');
+    }
+    
+    if (!multimediaData || typeof multimediaData !== 'object') {
+      throw new Error('Valid multimedia data is required');
+    }
+
+    // ✅ Clean the multimedia data - remove any nested objects
+    const cleanData = {
+      type: multimediaData.type || 'video',
+      url: multimediaData.url || '',
+      title: multimediaData.title || '',
+      description: multimediaData.description || '',
+      fileName: multimediaData.fileName || '',
+      fileSize: multimediaData.fileSize || 0,
+      fileType: multimediaData.fileType || '',
+      firebasePath: multimediaData.firebasePath || '',
       lessonId: lessonId,
       createdAt: serverTimestamp()
-    });
+    };
 
+    console.log('📤 Adding multimedia to lesson:', lessonId);
+    console.log('📤 Clean data:', cleanData);
+
+    const multimediaRef = collection(db, 'multimedia');
+    const docRef = await addDoc(multimediaRef, cleanData);
+
+    // Update the lesson with the multimedia ID
     const lessonRef = doc(db, 'lessons', lessonId);
     await updateDoc(lessonRef, {
       multimediaIds: arrayUnion(docRef.id),
       updatedAt: serverTimestamp()
     });
 
-    console.log('✅ Multimedia added:', docRef.id);
-    return { id: docRef.id, ...multimediaData };
+    console.log('✅ Multimedia added successfully:', docRef.id);
+    return { id: docRef.id, ...cleanData };
   } catch (error) {
     console.error('❌ Error adding multimedia:', error);
+    console.error('❌ Error details:', {
+      lessonId,
+      multimediaData,
+      errorMessage: error.message,
+      errorCode: error.code
+    });
     throw error;
   }
 };
 
-// ✅ Get multimedia by lesson ID
+// ✅ Get multimedia by lesson ID - IMPROVED
 export const getMultimediaByLesson = async (lessonId) => {
   try {
+    if (!lessonId) {
+      console.warn('⚠️ No lesson ID provided for getMultimediaByLesson');
+      return [];
+    }
+
+    console.log('📤 Fetching multimedia for lesson:', lessonId);
+
     const multimediaRef = collection(db, 'multimedia');
     const q = query(multimediaRef, where('lessonId', '==', lessonId));
     const querySnapshot = await getDocs(q);
+    
     const multimedia = [];
     querySnapshot.forEach(doc => {
-      multimedia.push({ id: doc.id, ...doc.data() });
+      multimedia.push({ 
+        id: doc.id, 
+        ...doc.data() 
+      });
     });
+
+    console.log(`✅ Found ${multimedia.length} multimedia items for lesson ${lessonId}`);
     return multimedia;
   } catch (error) {
     console.error('❌ Error getting multimedia:', error);
@@ -608,29 +652,88 @@ export const getMultimediaByLesson = async (lessonId) => {
   }
 };
 
-// ✅ Delete multimedia
-export const deleteMultimedia = async (mediaId) => {
+// ✅ Get multimedia by ID - ADD THIS
+export const getMultimediaById = async (mediaId) => {
   try {
+    if (!mediaId) {
+      console.warn('⚠️ No media ID provided');
+      return null;
+    }
+
     const mediaRef = doc(db, 'multimedia', mediaId);
     const mediaDoc = await getDoc(mediaRef);
+    
     if (mediaDoc.exists()) {
-      const mediaData = mediaDoc.data();
-      if (mediaData.lessonId) {
-        const lessonRef = doc(db, 'lessons', mediaData.lessonId);
-        await updateDoc(lessonRef, {
-          multimediaIds: arrayRemove(mediaId),
-          updatedAt: serverTimestamp()
-        });
-      }
+      return { id: mediaDoc.id, ...mediaDoc.data() };
     }
+    return null;
+  } catch (error) {
+    console.error('❌ Error getting multimedia by ID:', error);
+    return null;
+  }
+};
+
+// ✅ Delete multimedia - IMPROVED
+export const deleteMultimedia = async (mediaId) => {
+  try {
+    if (!mediaId) {
+      throw new Error('Media ID is required');
+    }
+
+    console.log('🗑️ Deleting multimedia:', mediaId);
+
+    const mediaRef = doc(db, 'multimedia', mediaId);
+    const mediaDoc = await getDoc(mediaRef);
+    
+    if (!mediaDoc.exists()) {
+      throw new Error('Multimedia not found');
+    }
+    
+    const mediaData = mediaDoc.data();
+    
+    // Remove from lesson's multimediaIds array
+    if (mediaData.lessonId) {
+      const lessonRef = doc(db, 'lessons', mediaData.lessonId);
+      await updateDoc(lessonRef, {
+        multimediaIds: arrayRemove(mediaId),
+        updatedAt: serverTimestamp()
+      });
+      console.log(`✅ Removed multimedia ${mediaId} from lesson ${mediaData.lessonId}`);
+    }
+
+    // Delete the multimedia document
     await deleteDoc(mediaRef);
-    console.log('✅ Multimedia deleted:', mediaId);
+    console.log('✅ Multimedia deleted successfully:', mediaId);
     return true;
   } catch (error) {
     console.error('❌ Error deleting multimedia:', error);
     throw error;
   }
 };
+
+// ✅ Update multimedia - ADD THIS
+export const updateMultimedia = async (mediaId, updateData) => {
+  try {
+    if (!mediaId) {
+      throw new Error('Media ID is required');
+    }
+
+    console.log('✏️ Updating multimedia:', mediaId);
+
+    const mediaRef = doc(db, 'multimedia', mediaId);
+    await updateDoc(mediaRef, {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    });
+
+    console.log('✅ Multimedia updated successfully:', mediaId);
+    return true;
+  } catch (error) {
+    console.error('❌ Error updating multimedia:', error);
+    throw error;
+  }
+};
+    
 
 // ============================================
 // QUIZ MANAGEMENT FUNCTIONS
