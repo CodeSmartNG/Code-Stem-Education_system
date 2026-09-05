@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getCourses, getCurrentUser, canAccessLesson, purchaseLesson, getTeacherWhatsAppUrl } from '../utils/storage';
+import { 
+  getCourses, 
+  getCurrentUser, 
+  canAccessLesson, 
+  purchaseLesson, 
+  getTeacherWhatsAppUrl,
+  getMultimediaByLesson,
+  getLessonById
+} from '../utils/storage';
 import Quiz from './Quiz';
 import MultimediaViewer from './MultimediaViewer';
 import PaymentModal from './payments/PaymentModal';
@@ -17,6 +25,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [lessonMultimedia, setLessonMultimedia] = useState([]);
 
   // Load courses from storage
   useEffect(() => {
@@ -33,6 +42,36 @@ const CourseCatalog = ({ student, setStudent }) => {
       console.error('❌ Error loading courses:', err);
       setCourses({});
       setError('Failed to load courses. Please refresh the page.');
+    }
+  };
+
+  // ✅ Load multimedia for a specific lesson (Firebase)
+  const loadLessonMultimedia = async (courseKey, lessonId) => {
+    try {
+      setIsLoading(true);
+      // Get multimedia from Firebase
+      const multimedia = await getMultimediaByLesson(lessonId);
+      setLessonMultimedia(multimedia || []);
+      
+      // Also get the lesson content
+      const lesson = await getLessonById(lessonId);
+      if (lesson) {
+        // Update the lesson in the selected course
+        setCourses(prev => ({
+          ...prev,
+          [courseKey]: {
+            ...prev[courseKey],
+            lessons: prev[courseKey]?.lessons?.map(l => 
+              l.id === lessonId ? { ...l, ...lesson } : l
+            )
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error loading lesson multimedia:', error);
+      setLessonMultimedia([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -95,7 +134,7 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       const course = courses[courseKey];
       const lesson = course.lessons?.[lessonIndex];
-      
+
       if (lesson?.quiz) {
         setCurrentQuiz(lesson.quiz);
         setShowQuiz(true);
@@ -143,7 +182,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   const canAccessLessonContent = (courseKey, lessonId) => {
     const currentUser = getCurrentUser();
     if (!currentUser) return false;
-    
+
     return canAccessLesson(currentUser.id, courseKey, lessonId);
   };
 
@@ -160,7 +199,7 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       const course = courses[courseKey];
       const lesson = course.lessons?.[lessonIndex];
-      
+
       if (!lesson) {
         console.error('Lesson not found');
         setIsLoading(false);
@@ -169,12 +208,14 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       if (window.confirm(`Are you sure you want to purchase "${lesson.title}" for ₦${lesson.price}?`)) {
         const paymentResult = await purchaseLesson(currentUser.id, courseKey, lesson.id);
-        
+
         if (paymentResult?.success) {
           alert('✅ Payment successful! You now have access to this lesson.');
           loadCourses();
           setSelectedCourse(courseKey);
           setCurrentLesson(lessonIndex);
+          // Load multimedia for the lesson
+          await loadLessonMultimedia(courseKey, lesson.id);
         } else {
           alert('❌ Payment failed. Please try again.');
         }
@@ -188,7 +229,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   };
 
   // Handle starting a lesson with new payment system
-  const handleStartLesson = (courseKey, lessonIndex) => {
+  const handleStartLesson = async (courseKey, lessonIndex) => {
     try {
       if (!courses || !courses[courseKey]) return;
 
@@ -245,6 +286,10 @@ const CourseCatalog = ({ student, setStudent }) => {
       setSelectedCourse(courseKey);
       setCurrentLesson(lessonIndex);
       setShowQuiz(false);
+      
+      // ✅ Load multimedia for the lesson from Firebase
+      await loadLessonMultimedia(courseKey, lesson.id);
+      
       window.scrollTo(0, 0);
     } catch (err) {
       console.error('Error starting lesson:', err);
@@ -257,7 +302,7 @@ const CourseCatalog = ({ student, setStudent }) => {
     try {
       setIsLoading(true);
       console.log('✅ Payment successful:', paymentData);
-      
+
       if (selectedLesson) {
         // Process teacher payment and payout
         const teacherPaymentSuccess = await processTeacherPayment(
@@ -268,13 +313,16 @@ const CourseCatalog = ({ student, setStudent }) => {
 
         // Reload courses to reflect the purchase
         loadCourses();
-        
+
         // Start the lesson
         setSelectedCourse(selectedLesson.courseKey);
         setCurrentLesson(selectedLesson.lessonIndex);
         setShowPaymentModal(false);
         setSelectedLesson(null);
-        
+
+        // ✅ Load multimedia for the lesson
+        await loadLessonMultimedia(selectedLesson.courseKey, selectedLesson.lesson.id);
+
         // Show appropriate success message
         if (teacherPaymentSuccess) {
           alert('🎉 Payment successful! Lesson unlocked and teacher payment processed.');
@@ -285,14 +333,14 @@ const CourseCatalog = ({ student, setStudent }) => {
       setIsLoading(false);
     } catch (error) {
       console.error('❌ Error processing teacher payment:', error);
-      
+
       // Still proceed with lesson access
       setSelectedCourse(selectedLesson?.courseKey);
       setCurrentLesson(selectedLesson?.lessonIndex);
       setShowPaymentModal(false);
       setSelectedLesson(null);
       setIsLoading(false);
-      
+
       alert('🎉 Payment successful! Lesson unlocked. There was an issue with teacher payout - support will handle it.');
     }
   };
@@ -434,9 +482,11 @@ const CourseCatalog = ({ student, setStudent }) => {
           </div>
         ) : (
           <>
-            {lesson.multimedia && lesson.multimedia.length > 0 && (
+            {/* ✅ Display multimedia from Firebase */}
+            {lessonMultimedia && lessonMultimedia.length > 0 && (
               <div className="multimedia-container">
-                <MultimediaViewer multimedia={lesson.multimedia} />
+                <h3>📹 Lesson Materials</h3>
+                <MultimediaViewer multimedia={lessonMultimedia} />
               </div>
             )}
 
