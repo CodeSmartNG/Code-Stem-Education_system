@@ -2,14 +2,21 @@
 
 import { 
   auth, 
-  db,
+  db, 
+  storage,  // ✅ Firebase Storage instance
   getCurrentUser as firebaseGetCurrentUser,
   getUserData as firebaseGetUserData,
   updateUserData as firebaseUpdateUserData,
   logoutUser as firebaseLogout,
   loginUser,
   registerUser as firebaseRegister,
-  resendVerification
+  resendVerification,
+  // ✅ Storage functions
+  uploadFile,
+  uploadFileWithProgress,
+  deleteFile,
+  getFileUrl,
+  listFiles
 } from './firebase';
 import { 
   doc, 
@@ -28,85 +35,32 @@ import {
   increment
 } from 'firebase/firestore';
 
-
-
-import { 
-  auth, 
-  db, 
-  storage,
-  uploadFile,
-  uploadFileWithProgress,
-  deleteFile,
-  getFileUrl,
-  listFiles
-} from './firebase';
-
-// ==========================================
+// ============================================
 // USER MANAGEMENT FUNCTIONS (Firebase)
-// ==========================================
-
-// src/utils/storage.jsx - Add Firebase Storage functions
-
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-// ✅ Upload file to Firebase Storage
-export const uploadFileToFirebase = async (file, path) => {
-  try {
-    const storage = getStorage();
-    const storageRef = ref(storage, path);
-    
-    // Upload file
-    const snapshot = await uploadBytes(storageRef, file);
-    console.log('✅ File uploaded:', snapshot.metadata.fullPath);
-    
-    // Get download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    console.log('✅ Download URL:', downloadURL);
-    
-    return downloadURL;
-  } catch (error) {
-    console.error('❌ Error uploading file:', error);
-    throw error;
-  }
-};
-
-// ✅ Delete file from Firebase Storage
-export const deleteFileFromFirebase = async (filePath) => {
-  try {
-    const storage = getStorage();
-    const storageRef = ref(storage, filePath);
-    await deleteObject(storageRef);
-    console.log('✅ File deleted:', filePath);
-    return true;
-  } catch (error) {
-    console.error('❌ Error deleting file:', error);
-    throw error;
-  }
-};
+// ============================================
 
 // ✅ Get current user - FIXED with email-based role forcing
 export const getCurrentUser = async () => {
   try {
     console.log('🔍 START getCurrentUser');
-    
+
     const firebaseUser = await firebaseGetCurrentUser();
     console.log('🔍 Firebase user:', firebaseUser);
-    
+
     if (!firebaseUser) {
       console.log('ℹ️ No Firebase user found');
       return null;
     }
 
     console.log('🔍 Firebase user UID:', firebaseUser.uid);
-    
+
     const userData = await firebaseGetUserData(firebaseUser.uid);
     console.log('🔍 User data from Firestore:', userData);
     console.log('🔍 Role from Firestore:', userData?.role);
-    
-    // ✅ EMAIL-BASED ROLE FORCING (FIXES THE ISSUE)
+
+    // ✅ EMAIL-BASED ROLE FORCING
     let role = userData?.role || 'student';
-    
-    // Force role based on email
+
     if (firebaseUser.email === 'codesmartng1@gmail.com' || 
         firebaseUser.email === 'admin@stem.com' ||
         firebaseUser.email === 'kabiralkasim6@gmail.com') {
@@ -117,7 +71,7 @@ export const getCurrentUser = async () => {
       role = 'teacher';
       console.log('🔍 Force set role to TEACHER for:', firebaseUser.email);
     }
-    
+
     const mergedUser = {
       id: firebaseUser.uid,
       uid: firebaseUser.uid,
@@ -125,7 +79,7 @@ export const getCurrentUser = async () => {
       emailVerified: firebaseUser.emailVerified || userData?.isEmailVerified || false,
       displayName: firebaseUser.displayName || userData?.name || '',
       name: userData?.name || '',
-      role: role, // ✅ Force set role
+      role: role,
       isApproved: userData?.isApproved || false,
       isEmailVerified: userData?.isEmailVerified || firebaseUser.emailVerified || false,
       whatsappNumber: userData?.whatsappNumber || '',
@@ -140,18 +94,16 @@ export const getCurrentUser = async () => {
       createdAt: userData?.createdAt || new Date().toISOString(),
       updatedAt: userData?.updatedAt || new Date().toISOString(),
     };
-    
+
     console.log('✅ Final merged user:', mergedUser);
     console.log('✅ Final role:', mergedUser.role);
-    
+
     return mergedUser;
   } catch (error) {
     console.error('❌ Error getting current user:', error);
     return null;
   }
 };
-
-// src/utils/storage.jsx - Replace authenticateUser with this
 
 // ✅ Authenticate user - FIXED with email-based role forcing
 export const authenticateUser = async (email, password) => {
@@ -165,9 +117,8 @@ export const authenticateUser = async (email, password) => {
     console.log('🔐 User data from Firestore:', userData);
     console.log('🔐 Role from Firestore:', userData?.role);
 
-    // ✅ EMAIL-BASED ROLE FORCING
     let role = userData?.role || 'student';
-    
+
     if (email === 'codesmartng1@gmail.com' || 
         email === 'admin@stem.com' ||
         email === 'kabiralkasim6@gmail.com') {
@@ -185,7 +136,7 @@ export const authenticateUser = async (email, password) => {
       email: user.email || userData?.email || '',
       emailVerified: user.emailVerified || userData?.isEmailVerified || false,
       name: userData?.name || '',
-      role: role, // ✅ Force set role
+      role: role,
       isApproved: userData?.isApproved || false,
       ...userData
     };
@@ -216,8 +167,7 @@ export const getUserData = async (userId) => {
   }
 };
 
-// src/utils/storage.jsx - Update updateUserData
-
+// ✅ Update user data
 export const updateUserData = async (userId, updatedData) => {
   try {
     if (!userId) {
@@ -228,21 +178,18 @@ export const updateUserData = async (userId, updatedData) => {
     console.log('🔧 Data:', updatedData);
 
     const userRef = doc(db, 'users', userId);
-    
-    // Try to update the document
     const result = await updateDoc(userRef, {
       ...updatedData,
       updatedAt: new Date().toISOString()
     });
-    
+
     console.log('✅ User data updated successfully:', userId);
     return result;
   } catch (error) {
     console.error('❌ Error updating user data:', error);
     console.error('❌ Error code:', error.code);
     console.error('❌ Error message:', error.message);
-    
-    // If update fails, try setting the document instead
+
     if (error.code === 'not-found') {
       try {
         console.log('🔄 Document not found, creating new...');
@@ -260,7 +207,7 @@ export const updateUserData = async (userId, updatedData) => {
         throw setError;
       }
     }
-    
+
     throw error;
   }
 };
@@ -493,12 +440,7 @@ export const deleteCourse = async (courseId) => {
 // LESSON MANAGEMENT FUNCTIONS
 // ============================================
 
-
-
-
-
 // ✅ Create a new lesson
-
 export const createLesson = async (courseId, lessonData) => {
   try {
     const lessonsRef = collection(db, 'lessons');
@@ -506,7 +448,6 @@ export const createLesson = async (courseId, lessonData) => {
     // ✅ Remove any invalid fields before saving
     const { multimediaData, quizData, ...cleanLessonData } = lessonData || {};
     
-    // ✅ Ensure clean data has no nested objects
     const lessonToSave = {
       title: cleanLessonData.title || '',
       content: cleanLessonData.content || '',
@@ -536,8 +477,6 @@ export const createLesson = async (courseId, lessonData) => {
     throw error;
   }
 };
-
-
 
 // ✅ Get lessons by course ID
 export const getLessonsByCourse = async (courseId) => {
@@ -617,12 +556,9 @@ export const deleteLesson = async (lessonId) => {
 // MULTIMEDIA MANAGEMENT FUNCTIONS
 // ============================================
 
-// src/utils/storage.jsx - Updated Multimedia Functions
-
 // ✅ Add multimedia to lesson - IMPROVED
 export const addMultimediaToLesson = async (lessonId, multimediaData) => {
   try {
-    // Validate inputs
     if (!lessonId) {
       throw new Error('Lesson ID is required');
     }
@@ -631,7 +567,7 @@ export const addMultimediaToLesson = async (lessonId, multimediaData) => {
       throw new Error('Valid multimedia data is required');
     }
 
-    // ✅ Clean the multimedia data - remove any nested objects
+    // ✅ Clean the multimedia data
     const cleanData = {
       type: multimediaData.type || 'video',
       url: multimediaData.url || '',
@@ -646,12 +582,10 @@ export const addMultimediaToLesson = async (lessonId, multimediaData) => {
     };
 
     console.log('📤 Adding multimedia to lesson:', lessonId);
-    console.log('📤 Clean data:', cleanData);
 
     const multimediaRef = collection(db, 'multimedia');
     const docRef = await addDoc(multimediaRef, cleanData);
 
-    // Update the lesson with the multimedia ID
     const lessonRef = doc(db, 'lessons', lessonId);
     await updateDoc(lessonRef, {
       multimediaIds: arrayUnion(docRef.id),
@@ -662,25 +596,17 @@ export const addMultimediaToLesson = async (lessonId, multimediaData) => {
     return { id: docRef.id, ...cleanData };
   } catch (error) {
     console.error('❌ Error adding multimedia:', error);
-    console.error('❌ Error details:', {
-      lessonId,
-      multimediaData,
-      errorMessage: error.message,
-      errorCode: error.code
-    });
     throw error;
   }
 };
 
-// ✅ Get multimedia by lesson ID - IMPROVED
+// ✅ Get multimedia by lesson ID
 export const getMultimediaByLesson = async (lessonId) => {
   try {
     if (!lessonId) {
-      console.warn('⚠️ No lesson ID provided for getMultimediaByLesson');
+      console.warn('⚠️ No lesson ID provided');
       return [];
     }
-
-    console.log('📤 Fetching multimedia for lesson:', lessonId);
 
     const multimediaRef = collection(db, 'multimedia');
     const q = query(multimediaRef, where('lessonId', '==', lessonId));
@@ -688,13 +614,10 @@ export const getMultimediaByLesson = async (lessonId) => {
     
     const multimedia = [];
     querySnapshot.forEach(doc => {
-      multimedia.push({ 
-        id: doc.id, 
-        ...doc.data() 
-      });
+      multimedia.push({ id: doc.id, ...doc.data() });
     });
 
-    console.log(`✅ Found ${multimedia.length} multimedia items for lesson ${lessonId}`);
+    console.log(`✅ Found ${multimedia.length} multimedia items`);
     return multimedia;
   } catch (error) {
     console.error('❌ Error getting multimedia:', error);
@@ -702,28 +625,7 @@ export const getMultimediaByLesson = async (lessonId) => {
   }
 };
 
-// ✅ Get multimedia by ID - ADD THIS
-export const getMultimediaById = async (mediaId) => {
-  try {
-    if (!mediaId) {
-      console.warn('⚠️ No media ID provided');
-      return null;
-    }
-
-    const mediaRef = doc(db, 'multimedia', mediaId);
-    const mediaDoc = await getDoc(mediaRef);
-    
-    if (mediaDoc.exists()) {
-      return { id: mediaDoc.id, ...mediaDoc.data() };
-    }
-    return null;
-  } catch (error) {
-    console.error('❌ Error getting multimedia by ID:', error);
-    return null;
-  }
-};
-
-// ✅ Delete multimedia - IMPROVED
+// ✅ Delete multimedia
 export const deleteMultimedia = async (mediaId) => {
   try {
     if (!mediaId) {
@@ -741,17 +643,14 @@ export const deleteMultimedia = async (mediaId) => {
     
     const mediaData = mediaDoc.data();
     
-    // Remove from lesson's multimediaIds array
     if (mediaData.lessonId) {
       const lessonRef = doc(db, 'lessons', mediaData.lessonId);
       await updateDoc(lessonRef, {
         multimediaIds: arrayRemove(mediaId),
         updatedAt: serverTimestamp()
       });
-      console.log(`✅ Removed multimedia ${mediaId} from lesson ${mediaData.lessonId}`);
     }
 
-    // Delete the multimedia document
     await deleteDoc(mediaRef);
     console.log('✅ Multimedia deleted successfully:', mediaId);
     return true;
@@ -760,30 +659,6 @@ export const deleteMultimedia = async (mediaId) => {
     throw error;
   }
 };
-
-// ✅ Update multimedia - ADD THIS
-export const updateMultimedia = async (mediaId, updateData) => {
-  try {
-    if (!mediaId) {
-      throw new Error('Media ID is required');
-    }
-
-    console.log('✏️ Updating multimedia:', mediaId);
-
-    const mediaRef = doc(db, 'multimedia', mediaId);
-    await updateDoc(mediaRef, {
-      ...updateData,
-      updatedAt: serverTimestamp()
-    });
-
-    console.log('✅ Multimedia updated successfully:', mediaId);
-    return true;
-  } catch (error) {
-    console.error('❌ Error updating multimedia:', error);
-    throw error;
-  }
-};
-    
 
 // ============================================
 // QUIZ MANAGEMENT FUNCTIONS
@@ -853,7 +728,7 @@ export const enrollStudent = async (studentId, courseId) => {
       updatedAt: serverTimestamp()
     });
 
-    console.log('✅ Student enrolled:', studentId, 'in course:', courseId);
+    console.log('✅ Student enrolled:', studentId);
     return true;
   } catch (error) {
     console.error('❌ Error enrolling student:', error);
@@ -920,7 +795,7 @@ export const updateProgress = async (studentId, courseId, completedLessonId) => 
 export const getTeacherWallet = async (teacherId) => {
   try {
     if (!teacherId) {
-      console.warn('⚠️ No teacher ID provided for getTeacherWallet');
+      console.warn('⚠️ No teacher ID provided');
       return {
         balance: 0,
         totalEarnings: 0,
@@ -1062,163 +937,59 @@ export const getTeacherWhatsAppNumber = async (teacherId) => {
   }
 };
 
-// ✅ Get teacher WhatsApp URL with actual number
-export const getTeacherWhatsAppUrlAsync = async (teacherId) => {
-  try {
-    const number = await getTeacherWhatsAppNumber(teacherId);
-    if (!number) return '#';
-
-    let phoneNumber = number.replace(/\D/g, '');
-    if (phoneNumber.startsWith('0')) {
-      phoneNumber = phoneNumber.substring(1);
-    }
-    if (!phoneNumber.startsWith('234') && phoneNumber.length === 10) {
-      phoneNumber = '234' + phoneNumber;
-    }
-
-    return `https://wa.me/${phoneNumber}`;
-  } catch (error) {
-    console.error('❌ Error getting WhatsApp URL:', error);
-    return '#';
-  }
-};
-
 // ============================================
-// LESSON ACCESS & PURCHASE FUNCTIONS
+// ✅ FIREBASE STORAGE WRAPPER FUNCTIONS
 // ============================================
 
-// ✅ Check if user can access lesson
-export const canAccessLesson = async (userId, courseKey, lessonId) => {
+// ✅ Upload file to Firebase Storage
+export const uploadFileToFirebase = async (file, path) => {
   try {
-    if (!userId || !courseKey || !lessonId) {
-      return false;
+    if (!file) {
+      throw new Error('No file provided');
     }
-
-    const userData = await getUserData(userId);
-    if (!userData) return false;
-
-    const purchasedLessons = userData.purchasedLessons || [];
-    return purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId);
+    return await uploadFile(file, path);
   } catch (error) {
-    console.error('❌ Error checking lesson access:', error);
-    return false;
-  }
-};
-
-// ✅ Purchase lesson
-export const purchaseLesson = async (userId, courseKey, lessonId) => {
-  try {
-    if (!userId || !courseKey || !lessonId) {
-      throw new Error('User ID, course key, and lesson ID are required');
-    }
-
-    const userData = await getUserData(userId);
-    if (!userData) {
-      throw new Error('User not found');
-    }
-
-    const purchasedLessons = userData.purchasedLessons || [];
-    const alreadyPurchased = purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId);
-
-    if (alreadyPurchased) {
-      throw new Error('Lesson already purchased');
-    }
-
-    purchasedLessons.push({
-      courseKey: courseKey,
-      lessonId: lessonId,
-      purchasedAt: new Date().toISOString()
-    });
-
-    await updateUserData(userId, {
-      purchasedLessons: purchasedLessons
-    });
-
-    console.log('✅ Lesson purchased:', lessonId);
-    return true;
-  } catch (error) {
-    console.error('❌ Error purchasing lesson:', error);
+    console.error('❌ Error uploading file:', error);
     throw error;
   }
 };
 
-// ✅ Process lesson payment
-export const processLessonPayment = async (userId, courseKey, lessonId, amount, paymentMethod = 'paystack') => {
+// ✅ Upload file with progress tracking
+export const uploadFileToFirebaseWithProgress = async (file, path, onProgress) => {
   try {
-    if (!userId || !courseKey || !lessonId) {
-      throw new Error('User ID, course key, and lesson ID are required');
+    if (!file) {
+      throw new Error('No file provided');
     }
-
-    const userData = await getUserData(userId);
-    if (!userData) {
-      throw new Error('User not found');
-    }
-
-    const purchasedLessons = userData.purchasedLessons || [];
-    const alreadyPurchased = purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId);
-
-    if (alreadyPurchased) {
-      throw new Error('Lesson already purchased');
-    }
-
-    const paymentResult = {
-      data: {
-        reference: `paystack_${Date.now()}`,
-        tx_ref: `flutterwave_${Date.now()}`
-      }
-    };
-
-    const transaction = {
-      userId: userId,
-      courseKey: courseKey,
-      lessonId: lessonId,
-      amount: amount,
-      paymentMethod: paymentMethod,
-      status: 'pending',
-      reference: paymentResult.data.reference || paymentResult.data.tx_ref,
-      createdAt: new Date().toISOString()
-    };
-
-    return paymentResult;
+    return await uploadFileWithProgress(file, path, onProgress);
   } catch (error) {
-    console.error('❌ Error processing lesson payment:', error);
+    console.error('❌ Error uploading file with progress:', error);
     throw error;
   }
 };
 
-// ✅ Verify payment
-export const verifyPayment = async (reference) => {
+// ✅ Delete file from Firebase Storage
+export const deleteFileFromFirebase = async (filePath) => {
   try {
-    if (!reference) {
-      throw new Error('Payment reference is required');
+    if (!filePath) {
+      throw new Error('No file path provided');
     }
-    return {
-      status: true,
-      data: {
-        status: 'success',
-        reference: reference,
-        amount: 0,
-        gateway_response: 'Approved',
-        paid_at: new Date().toISOString()
-      }
-    };
+    return await deleteFile(filePath);
   } catch (error) {
-    console.error('❌ Error verifying payment:', error);
+    console.error('❌ Error deleting file:', error);
     throw error;
   }
 };
 
-// ✅ Get user's purchased lessons
-export const getUserPurchasedLessons = async (userId) => {
+// ✅ Get file URL from Firebase Storage
+export const getFileUrlFromFirebase = async (filePath) => {
   try {
-    if (!userId) {
-      throw new Error('User ID is required');
+    if (!filePath) {
+      throw new Error('No file path provided');
     }
-    const userData = await getUserData(userId);
-    return userData?.purchasedLessons || [];
+    return await getFileUrl(filePath);
   } catch (error) {
-    console.error('❌ Error getting purchased lessons:', error);
-    return [];
+    console.error('❌ Error getting file URL:', error);
+    throw error;
   }
 };
 
@@ -1344,28 +1115,22 @@ export const getPendingTeachers = async () => {
   }
 };
 
-// src/utils/storage.jsx - Update approveTeacher
-
+// ✅ Approve teacher
 export const approveTeacher = async (teacherId) => {
   try {
     console.log('👨‍🏫 Approving teacher:', teacherId);
-    
-    // Get the current user to check if they are admin
+
     const currentUser = await getCurrentUser();
-    console.log('👨‍🏫 Current user:', currentUser);
-    console.log('👨‍🏫 Current user role:', currentUser?.role);
-    
-    // Check if current user is admin
     if (currentUser?.role !== 'admin') {
       throw new Error('Only admin can approve teachers');
     }
-    
+
     await updateUserData(teacherId, {
       isApproved: true,
       approvedDate: new Date().toISOString(),
       status: 'approved'
     });
-    
+
     console.log('✅ Teacher approved successfully:', teacherId);
     return true;
   } catch (error) {
@@ -1374,19 +1139,12 @@ export const approveTeacher = async (teacherId) => {
   }
 };
 
-// src/utils/storage.jsx - Add this function
-
 // ✅ Reject teacher
 export const rejectTeacher = async (teacherId) => {
   try {
     console.log('👨‍🏫 Rejecting teacher:', teacherId);
 
-    // Get the current user to check if they are admin
     const currentUser = await getCurrentUser();
-    console.log('👨‍🏫 Current user:', currentUser);
-    console.log('👨‍🏫 Current user role:', currentUser?.role);
-
-    // Check if current user is admin
     if (currentUser?.role !== 'admin') {
       throw new Error('Only admin can reject teachers');
     }
@@ -1562,6 +1320,63 @@ export const getAllCoursesAnalyticsForAdmin = async () => {
 };
 
 // ============================================
+// LESSON ACCESS & PURCHASE FUNCTIONS
+// ============================================
+
+// ✅ Check if user can access lesson
+export const canAccessLesson = async (userId, courseKey, lessonId) => {
+  try {
+    if (!userId || !courseKey || !lessonId) {
+      return false;
+    }
+
+    const userData = await getUserData(userId);
+    if (!userData) return false;
+
+    const purchasedLessons = userData.purchasedLessons || [];
+    return purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId);
+  } catch (error) {
+    console.error('❌ Error checking lesson access:', error);
+    return false;
+  }
+};
+
+// ✅ Purchase lesson
+export const purchaseLesson = async (userId, courseKey, lessonId) => {
+  try {
+    if (!userId || !courseKey || !lessonId) {
+      throw new Error('User ID, course key, and lesson ID are required');
+    }
+
+    const userData = await getUserData(userId);
+    if (!userData) {
+      throw new Error('User not found');
+    }
+
+    const purchasedLessons = userData.purchasedLessons || [];
+    if (purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId)) {
+      throw new Error('Lesson already purchased');
+    }
+
+    purchasedLessons.push({
+      courseKey: courseKey,
+      lessonId: lessonId,
+      purchasedAt: new Date().toISOString()
+    });
+
+    await updateUserData(userId, {
+      purchasedLessons: purchasedLessons
+    });
+
+    console.log('✅ Lesson purchased:', lessonId);
+    return true;
+  } catch (error) {
+    console.error('❌ Error purchasing lesson:', error);
+    throw error;
+  }
+};
+
+// ============================================
 // INITIALIZE DEFAULT COURSES
 // ============================================
 
@@ -1576,9 +1391,7 @@ export const initializeDefaultCourses = async () => {
     }
 
     // Default courses data
-    const defaultCourseData = [
-      // ... your default courses ...
-    ];
+    const defaultCourseData = [];
 
     for (const courseData of defaultCourseData) {
       const lessons = courseData.lessons || [];
@@ -1687,14 +1500,10 @@ export default {
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
-  getTeacherWhatsAppUrlAsync,
 
   // Lesson Access & Payment
   canAccessLesson,
   purchaseLesson,
-  processLessonPayment,
-  verifyPayment,
-  getUserPurchasedLessons,
 
   // Admin Functions
   getAllCoursesForAdmin,
@@ -1705,7 +1514,7 @@ export default {
   getAllTeachers,
   getPendingTeachers,
   approveTeacher,
-  rejectTeacher, // ✅ ADD THIS
+  rejectTeacher,
   dismissTeacher,
   getTeacherCoursesForAdmin,
   getPlatformStats,
@@ -1716,6 +1525,12 @@ export default {
   getPaymentTransactions,
   savePaymentTransactions,
   getAllCoursesAnalyticsForAdmin,
+
+  // Storage Functions
+  uploadFileToFirebase,
+  uploadFileToFirebaseWithProgress,
+  deleteFileFromFirebase,
+  getFileUrlFromFirebase,
 
   // Storage
   initializeStorage,
