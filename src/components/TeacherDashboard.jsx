@@ -258,106 +258,103 @@ const TeacherDashboard = () => {
     }
   };
 
-  const handleDeleteCourse = async (courseId) => {
-    if (window.confirm('⚠️ Are you sure you want to delete this course? This action cannot be undone.')) {
-      try {
-        await deleteCourse(courseId);
-        alert('✅ Course deleted successfully!');
-        await loadData();
-      } catch (error) {
-        alert('❌ Error deleting course: ' + error.message);
-      }
-    }
-  };
 
-  // ✅ Lesson Management Functions - FIXED
-  const handleAddLesson = async (e) => {
-    e.preventDefault();
-    if (!selectedCourse) {
-      alert('Please select a course first');
-      return;
-    }
 
-    setIsUploading(true);
-    setUploadProgress(0);
 
-    try {
-      const progressInterval = simulateUploadProgress();
+// ✅ Handle Add Lesson - WITH FIREBASE STORAGE
+const handleAddLesson = async (e) => {
+  e.preventDefault();
+  if (!selectedCourse) {
+    alert('Please select a course first');
+    return;
+  }
 
-      // 1. Prepare clean lesson data (NO multimediaData or quizData)
-      const lessonData = {
-        title: newLessonForm.title,
-        content: newLessonForm.content,
-        duration: newLessonForm.duration,
-        isFree: newLessonForm.isFree,
-        price: newLessonForm.isFree ? 0 : newLessonForm.price,
-        order: newLessonForm.order || courseLessons.length + 1
+  setIsUploading(true);
+  setUploadProgress(0);
+
+  try {
+    const progressInterval = simulateUploadProgress();
+
+    // 1. Prepare clean lesson data
+    const lessonData = {
+      title: newLessonForm.title,
+      content: newLessonForm.content,
+      duration: newLessonForm.duration,
+      isFree: newLessonForm.isFree,
+      price: newLessonForm.isFree ? 0 : newLessonForm.price,
+      order: newLessonForm.order || courseLessons.length + 1
+    };
+
+    // 2. Create the lesson first
+    const lesson = await createLesson(selectedCourse, lessonData);
+
+    // 3. ✅ Upload video to Firebase Storage (NOT base64)
+    if (newLessonForm.videoFile) {
+      const currentUser = await getCurrentUser();
+      const fileExtension = newLessonForm.videoFile.name.split('.').pop();
+      const filePath = `teachers/${currentUser.uid}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
+      
+      // ✅ Use Firebase Storage upload
+      const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
+
+      const multimediaData = {
+        type: 'video',
+        url: downloadURL,  // ✅ This is a URL, not base64 data
+        title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
+        description: newLessonForm.videoDescription || 'Video content for this lesson',
+        fileName: newLessonForm.videoFileName,
+        fileSize: newLessonForm.videoFile.size,
+        fileType: newLessonForm.videoFile.type,
+        firebasePath: filePath
       };
 
-      // 2. Create the lesson first
-      const lesson = await createLesson(selectedCourse, lessonData);
-
-      // 3. Add video file if provided (AFTER lesson is created)
-      if (newLessonForm.videoFile) {
-        const currentUser = await getCurrentUser();
-        const filePath = `teachers/${currentUser.uid}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
-        const fileUrl = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
-
-        const multimediaData = {
-          type: 'video',
-          url: fileUrl,
-          title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
-          description: newLessonForm.videoDescription || 'Video content for this lesson',
-          fileName: newLessonForm.videoFileName,
-          fileSize: newLessonForm.videoFile.size,
-          fileType: newLessonForm.videoFile.type,
-          firebasePath: filePath
-        };
-
-        // Add multimedia to the lesson
-        await addMultimediaToLesson(lesson.id, multimediaData);
-      }
-
-      // 4. Add quiz if there are questions (AFTER lesson is created)
-      if (quizForm.questions.length > 0) {
-        const quizData = {
-          title: quizForm.title || 'Lesson Quiz',
-          passingScore: quizForm.passingScore,
-          questions: quizForm.questions
-        };
-
-        // Create quiz for the lesson
-        await createQuiz(lesson.id, quizData);
-      }
-
-      alert('✅ Lesson added successfully!');
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      // Reset form
-      setNewLessonForm({
-        title: '',
-        content: '',
-        duration: '',
-        isFree: true,
-        price: 0,
-        order: 0,
-        videoFile: null,
-        videoFileName: '',
-        videoTitle: '',
-        videoDescription: ''
-      });
-      resetQuizForm();
-
-      // Reload lessons
-      await loadCourseLessons(selectedCourse);
-      setIsUploading(false);
-    } catch (error) {
-      console.error('Error adding lesson:', error);
-      alert('❌ Error adding lesson: ' + error.message);
-      setIsUploading(false);
+      // Add multimedia to the lesson
+      await addMultimediaToLesson(lesson.id, multimediaData);
     }
-  };
+
+    // 4. Add quiz if there are questions
+    if (quizForm.questions.length > 0) {
+      const quizData = {
+        title: quizForm.title || 'Lesson Quiz',
+        passingScore: quizForm.passingScore,
+        questions: quizForm.questions
+      };
+      await createQuiz(lesson.id, quizData);
+    }
+
+    alert('✅ Lesson added successfully!');
+    clearInterval(progressInterval);
+    setUploadProgress(100);
+
+    // Reset form
+    setNewLessonForm({
+      title: '',
+      content: '',
+      duration: '',
+      isFree: true,
+      price: 0,
+      order: 0,
+      videoFile: null,
+      videoFileName: '',
+      videoTitle: '',
+      videoDescription: ''
+    });
+    resetQuizForm();
+
+    await loadCourseLessons(selectedCourse);
+    setIsUploading(false);
+  } catch (error) {
+    console.error('Error adding lesson:', error);
+    alert('❌ Error adding lesson: ' + error.message);
+    setIsUploading(false);
+  }
+};
+  
+
+
+
+
+
 
   const handleUpdateLesson = async (e) => {
     e.preventDefault();
