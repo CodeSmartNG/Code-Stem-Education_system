@@ -28,6 +28,19 @@ import {
   increment
 } from 'firebase/firestore';
 
+
+
+import { 
+  auth, 
+  db, 
+  storage,
+  uploadFile,
+  uploadFileWithProgress,
+  deleteFile,
+  getFileUrl,
+  listFiles
+} from './firebase';
+
 // ==========================================
 // USER MANAGEMENT FUNCTIONS (Firebase)
 // ==========================================
