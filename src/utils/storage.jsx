@@ -1554,6 +1554,9 @@ export default {
   resendEmailConfirmation,
   updateUserData,
   getUserData,
+// In the export section, add:
+processLessonPayment,
+verifyPayment,
 
   // Student Management
   getStudents,
