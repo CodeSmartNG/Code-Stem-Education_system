@@ -24,6 +24,16 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
+// ✅ ADD STORAGE IMPORTS
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  uploadBytesResumable,
+  getDownloadURL, 
+  deleteObject,
+  listAll
+} from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCQ_sNo4XG16JS7waJ_TEkCrK8sc1A4gq0",
@@ -38,6 +48,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+// ✅ Initialize Storage
+const storage = getStorage(app);
 
 // ========================================
 // AUTH FUNCTIONS
@@ -48,7 +60,7 @@ export const registerUser = async (email, password, userData) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     await sendEmailVerification(user);
-    
+
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: email,
@@ -63,7 +75,7 @@ export const registerUser = async (email, password, userData) => {
       progress: {},
       ...userData
     });
-    
+
     return { user, userData };
   } catch (error) {
     console.error('❌ Error registering user:', error);
@@ -75,25 +87,25 @@ export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
+
     // Check if email is verified
     if (!user.emailVerified) {
       // Check if this is a demo account (we can skip verification for demo)
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.exists() ? userDoc.data() : {};
-      
+
       // Allow demo accounts to bypass email verification
       if (userData.isDemoAccount) {
         // Auto-verify demo accounts
         return { ...user, ...userData, emailVerified: true };
       }
-      
+
       throw new Error('Please verify your email before logging in.');
     }
-    
+
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.exists() ? userDoc.data() : {};
-    
+
     return { ...user, ...userData };
   } catch (error) {
     console.error('❌ Error logging in:', error);
@@ -268,9 +280,137 @@ export const saveProgress = async (studentId, courseId, progressData) => {
 };
 
 // ========================================
-// DEFAULT USER CREATION
+// ✅ FIREBASE STORAGE FUNCTIONS
 // ========================================
 
+// ✅ Upload file to Firebase Storage
+export const uploadFile = async (file, path) => {
+  try {
+    if (!file) {
+      throw new Error('No file provided');
+    }
+
+    console.log('📤 Uploading file to Firebase Storage:', path);
+    console.log('📤 File size:', file.size, 'bytes');
+
+    const storageRef = ref(storage, path);
+    
+    // Upload file
+    const snapshot = await uploadBytes(storageRef, file);
+    console.log('✅ File uploaded:', snapshot.metadata.fullPath);
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log('✅ Download URL:', downloadURL);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
+    throw error;
+  }
+};
+
+// ✅ Upload file with progress tracking
+export const uploadFileWithProgress = async (file, path, onProgress) => {
+  try {
+    if (!file) {
+      throw new Error('No file provided');
+    }
+
+    console.log('📤 Uploading file with progress:', path);
+
+    const storageRef = ref(storage, path);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          // Progress callback
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          if (onProgress) {
+            onProgress(progress);
+          }
+          console.log('📤 Upload progress:', progress.toFixed(0) + '%');
+        },
+        (error) => {
+          console.error('❌ Upload error:', error);
+          reject(error);
+        },
+        async () => {
+          // Success callback
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          console.log('✅ Upload complete:', downloadURL);
+          resolve(downloadURL);
+        }
+      );
+    });
+  } catch (error) {
+    console.error('❌ Error uploading file with progress:', error);
+    throw error;
+  }
+};
+
+// ✅ Delete file from Firebase Storage
+export const deleteFile = async (filePath) => {
+  try {
+    if (!filePath) {
+      throw new Error('No file path provided');
+    }
+
+    const storageRef = ref(storage, filePath);
+    await deleteObject(storageRef);
+    console.log('✅ File deleted:', filePath);
+    return true;
+  } catch (error) {
+    console.error('❌ Error deleting file:', error);
+    throw error;
+  }
+};
+
+// ✅ Get file download URL
+export const getFileUrl = async (filePath) => {
+  try {
+    if (!filePath) {
+      throw new Error('No file path provided');
+    }
+
+    const storageRef = ref(storage, filePath);
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log('✅ Got download URL:', downloadURL);
+    return downloadURL;
+  } catch (error) {
+    console.error('❌ Error getting file URL:', error);
+    throw error;
+  }
+};
+
+// ✅ List all files in a folder
+export const listFiles = async (folderPath) => {
+  try {
+    if (!folderPath) {
+      throw new Error('No folder path provided');
+    }
+
+    const listRef = ref(storage, folderPath);
+    const result = await listAll(listRef);
+    
+    const files = [];
+    result.items.forEach((itemRef) => {
+      files.push(itemRef.name);
+    });
+    
+    console.log('✅ Files in folder:', files);
+    return files;
+  } catch (error) {
+    console.error('❌ Error listing files:', error);
+    throw error;
+  }
+};
+
+// ========================================
+// DEFAULT USER CREATION
+// ========================================
 
 export const createDefaultUsers = async () => {
   try {
@@ -329,7 +469,7 @@ export const createDefaultUsers = async () => {
           if (error.code === 'auth/email-already-in-use') {
             console.log(`ℹ️ ${userData.email} already exists, updating...`);
             isExisting = true;
-            
+
             // Sign in to get the user's UID
             try {
               const userCredential = await signInWithEmailAndPassword(
@@ -395,10 +535,11 @@ export const createDefaultUsers = async () => {
 // EXPORT ALL
 // ========================================
 
-export { auth, db };
+export { auth, db, storage };
 export default {
   auth,
   db,
+  storage,
   registerUser,
   loginUser,
   logoutUser,
@@ -413,5 +554,10 @@ export default {
   saveLesson,
   getLessons,
   saveProgress,
+  uploadFile,
+  uploadFileWithProgress,
+  deleteFile,
+  getFileUrl,
+  listFiles,
   createDefaultUsers
 };
