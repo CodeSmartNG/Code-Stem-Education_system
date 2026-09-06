@@ -32,7 +32,44 @@ import {
 // USER MANAGEMENT FUNCTIONS (Firebase)
 // ==========================================
 
-// src/utils/storage.jsx - Replace getCurrentUser with this
+// src/utils/storage.jsx - Add Firebase Storage functions
+
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// ✅ Upload file to Firebase Storage
+export const uploadFileToFirebase = async (file, path) => {
+  try {
+    const storage = getStorage();
+    const storageRef = ref(storage, path);
+    
+    // Upload file
+    const snapshot = await uploadBytes(storageRef, file);
+    console.log('✅ File uploaded:', snapshot.metadata.fullPath);
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log('✅ Download URL:', downloadURL);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error('❌ Error uploading file:', error);
+    throw error;
+  }
+};
+
+// ✅ Delete file from Firebase Storage
+export const deleteFileFromFirebase = async (filePath) => {
+  try {
+    const storage = getStorage();
+    const storageRef = ref(storage, filePath);
+    await deleteObject(storageRef);
+    console.log('✅ File deleted:', filePath);
+    return true;
+  } catch (error) {
+    console.error('❌ Error deleting file:', error);
+    throw error;
+  }
+};
 
 // ✅ Get current user - FIXED with email-based role forcing
 export const getCurrentUser = async () => {
