@@ -1,9 +1,10 @@
 // src/utils/storage.jsx
-
+//firebase 
 import { 
   auth, 
   db, 
-  storage,  // ✅ Firebase Storage instance
+  storage,
+  // ✅ Firebase Storage instance
   getCurrentUser as firebaseGetCurrentUser,
   getUserData as firebaseGetUserData,
   updateUserData as firebaseUpdateUserData,
