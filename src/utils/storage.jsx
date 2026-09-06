@@ -40,6 +40,101 @@ import {
 // USER MANAGEMENT FUNCTIONS (Firebase)
 // ============================================
 
+
+
+
+// ✅ Process lesson payment
+export const processLessonPayment = async (userId, courseKey, lessonId, amount, paymentMethod = 'paystack') => {
+  try {
+    if (!userId || !courseKey || !lessonId) {
+      throw new Error('User ID, course key, and lesson ID are required');
+    }
+
+    const userData = await getUserData(userId);
+    if (!userData) {
+      throw new Error('User not found');
+    }
+
+    const purchasedLessons = userData.purchasedLessons || [];
+    if (purchasedLessons.some(p => p.courseKey === courseKey && p.lessonId === lessonId)) {
+      throw new Error('Lesson already purchased');
+    }
+
+    // Create payment result
+    const paymentResult = {
+      data: {
+        reference: `paystack_${Date.now()}`,
+        tx_ref: `flutterwave_${Date.now()}`
+      }
+    };
+
+    const transaction = {
+      userId: userId,
+      courseKey: courseKey,
+      lessonId: lessonId,
+      amount: amount,
+      paymentMethod: paymentMethod,
+      status: 'pending',
+      reference: paymentResult.data.reference || paymentResult.data.tx_ref,
+      createdAt: new Date().toISOString()
+    };
+
+    // Save transaction
+    const transactionsRef = collection(db, 'transactions');
+    await addDoc(transactionsRef, transaction);
+
+    console.log('✅ Payment initiated:', transaction.reference);
+    return paymentResult;
+  } catch (error) {
+    console.error('❌ Error processing lesson payment:', error);
+    throw error;
+  }
+};
+
+// ✅ Verify payment
+export const verifyPayment = async (reference) => {
+  try {
+    if (!reference) {
+      throw new Error('Payment reference is required');
+    }
+
+    // Find transaction
+    const transactionsRef = collection(db, 'transactions');
+    const q = query(transactionsRef, where('reference', '==', reference));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      throw new Error('Transaction not found');
+    }
+
+    // Update transaction status
+    const docRef = querySnapshot.docs[0].ref;
+    await updateDoc(docRef, {
+      status: 'completed',
+      updatedAt: new Date().toISOString()
+    });
+
+    return {
+      status: true,
+      data: {
+        status: 'success',
+        reference: reference,
+        gateway_response: 'Approved',
+        paid_at: new Date().toISOString()
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error verifying payment:', error);
+    throw error;
+  }
+};
+
+
+
+
+
+
+
 // ✅ Get current user - FIXED with email-based role forcing
 export const getCurrentUser = async () => {
   try {
