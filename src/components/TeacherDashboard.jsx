@@ -395,4 +395,15 @@ const TeacherDashboard = () => {
   // ... (rest of the code remains the same)
 };
 
+// Add this function in TeacherDashboard.jsx
+const handlePublishCourse = async (courseId) => {
+  try {
+    await updateCourse(courseId, { isPublished: true });
+    alert('✅ Course published successfully! Students can now see it.');
+    await loadData();
+  } catch (error) {
+    alert('❌ Error publishing course: ' + error.message);
+  }
+};
+
 export default TeacherDashboard;
