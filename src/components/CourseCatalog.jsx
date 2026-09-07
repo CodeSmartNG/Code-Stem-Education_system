@@ -32,26 +32,42 @@ const CourseCatalog = ({ student, setStudent }) => {
     loadCourses();
   }, []);
 
-  const loadCourses = async () => {
+// ✅ Load courses from storage - FIXED
+const loadCourses = async () => {
   try {
-    // Get all courses
+    setIsLoading(true);
+    
+    // Get all courses from Firebase
     const coursesData = await getCourses();
     console.log('✅ Loaded courses:', coursesData);
+    console.log('📚 Number of courses:', Object.keys(coursesData || {}).length);
     
-    // Filter only published courses for students
+    // ✅ Filter only published courses for students
     const publishedCourses = {};
-    Object.entries(coursesData).forEach(([key, course]) => {
-      if (course.isPublished !== false) { // Show if not explicitly unpublished
+    Object.entries(coursesData || {}).forEach(([key, course]) => {
+      // Show course if it's published (isPublished !== false)
+      if (course.isPublished !== false) {
         publishedCourses[key] = course;
+        console.log(`📢 Published course: ${course.title}`);
+      } else {
+        console.log(`📝 Draft course (hidden): ${course.title}`);
       }
     });
     
+    console.log('✅ Published courses:', Object.keys(publishedCourses).length);
     setCourses(publishedCourses);
+    setError(null);
   } catch (err) {
     console.error('❌ Error loading courses:', err);
+    setCourses({});
+    setError('Failed to load courses. Please refresh the page.');
+  } finally {
+    setIsLoading(false);
   }
 };
 
+
+  
   // ✅ Load multimedia for a specific lesson (Firebase)
   const loadLessonMultimedia = async (courseKey, lessonId) => {
     try {
