@@ -32,28 +32,41 @@ const CourseCatalog = ({ student, setStudent }) => {
     loadCourses();
   }, []);
 
-// ✅ Load courses from storage - FIXED
+
+
+// ✅ Load courses from storage - FIXED (handles arrays)
 const loadCourses = async () => {
   try {
     setIsLoading(true);
-    
-    // Get all courses from Firebase
+
+    // Get all courses from Firebase (returns an array)
     const coursesData = await getCourses();
     console.log('✅ Loaded courses:', coursesData);
-    console.log('📚 Number of courses:', Object.keys(coursesData || {}).length);
-    
+    console.log('📚 Number of courses:', coursesData?.length || 0);
+
     // ✅ Filter only published courses for students
     const publishedCourses = {};
-    Object.entries(coursesData || {}).forEach(([key, course]) => {
-      // Show course if it's published (isPublished !== false)
-      if (course.isPublished !== false) {
-        publishedCourses[key] = course;
-        console.log(`📢 Published course: ${course.title}`);
-      } else {
-        console.log(`📝 Draft course (hidden): ${course.title}`);
-      }
-    });
     
+    // Check if coursesData is an array
+    if (Array.isArray(coursesData)) {
+      coursesData.forEach(course => {
+        // Show course if it's published (isPublished !== false)
+        if (course.isPublished !== false) {
+          publishedCourses[course.id] = course;
+          console.log(`📢 Published course: ${course.title}`);
+        } else {
+          console.log(`📝 Draft course (hidden): ${course.title}`);
+        }
+      });
+    } else {
+      // If it's an object (fallback)
+      Object.entries(coursesData || {}).forEach(([key, course]) => {
+        if (course.isPublished !== false) {
+          publishedCourses[key] = course;
+        }
+      });
+    }
+
     console.log('✅ Published courses:', Object.keys(publishedCourses).length);
     setCourses(publishedCourses);
     setError(null);
