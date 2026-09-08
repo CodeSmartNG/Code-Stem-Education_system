@@ -1037,57 +1037,233 @@ export const getTeacherWhatsAppNumber = async (teacherId) => {
 // ✅ FIREBASE STORAGE WRAPPER FUNCTIONS
 // ============================================
 
-// ✅ Upload file to Firebase Storage
-export const uploadFileToFirebase = async (file, path) => {
+
+
+// src/utils/storage.jsx - Replace these functions
+
+// ============================================
+// HELPER: Convert file to base64 (fallback)
+// ============================================
+
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// ============================================
+// ✅ Upload file to Firebase Storage (WITH RETRY & FALLBACK)
+// ============================================
+
+export const uploadFileToFirebase = async (file, path, retries = 3) => {
   try {
     if (!file) {
       throw new Error('No file provided');
     }
-    return await uploadFile(file, path);
+
+    console.log('📤 Uploading file to Firebase Storage:', path);
+    console.log('📤 File size:', file.size, 'bytes');
+    console.log('📤 File type:', file.type);
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      throw new Error('File size exceeds 100MB limit');
+    }
+
+    // Try upload with retry
+    let lastError = null;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`📤 Upload attempt ${attempt}/${retries}...`);
+        
+        // Use the imported uploadFile from firebase.js
+        const downloadURL = await uploadFile(file, path);
+        
+        console.log(`✅ Upload successful on attempt ${attempt}!`);
+        console.log('✅ Download URL:', downloadURL);
+        
+        return downloadURL;
+      } catch (error) {
+        console.error(`❌ Upload attempt ${attempt} failed:`, error);
+        lastError = error;
+        
+        if (attempt < retries) {
+          // Wait before retry (exponential backoff)
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // If all retries failed, try base64 fallback for small files
+    if (file.size < 1024 * 1024) { // Less than 1MB
+      try {
+        console.log('🔄 Trying base64 fallback...');
+        const base64 = await fileToBase64(file);
+        console.log('✅ Base64 conversion successful');
+        return base64;
+      } catch (base64Error) {
+        console.error('❌ Base64 fallback also failed:', base64Error);
+      }
+    } else {
+      console.warn('⚠️ File too large for base64 fallback, only <1MB files can use fallback');
+    }
+
+    throw lastError || new Error('Upload failed after retries');
   } catch (error) {
     console.error('❌ Error uploading file:', error);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error message:', error.message);
     throw error;
   }
 };
 
-// ✅ Upload file with progress tracking
-export const uploadFileToFirebaseWithProgress = async (file, path, onProgress) => {
+// ============================================
+// ✅ Upload file with progress tracking (WITH RETRY)
+// ============================================
+
+export const uploadFileToFirebaseWithProgress = async (file, path, onProgress, retries = 3) => {
   try {
     if (!file) {
       throw new Error('No file provided');
     }
-    return await uploadFileWithProgress(file, path, onProgress);
+
+    console.log('📤 Uploading file with progress:', path);
+    console.log('📤 File size:', file.size, 'bytes');
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      throw new Error('File size exceeds 100MB limit');
+    }
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`📤 Upload attempt ${attempt}/${retries}...`);
+        
+        // Use the imported uploadFileWithProgress from firebase.js
+        const downloadURL = await uploadFileWithProgress(file, path, (progress) => {
+          if (onProgress) {
+            onProgress(progress);
+          }
+        });
+        
+        console.log(`✅ Upload successful on attempt ${attempt}!`);
+        console.log('✅ Download URL:', downloadURL);
+        
+        return downloadURL;
+      } catch (error) {
+        console.error(`❌ Upload attempt ${attempt} failed:`, error);
+        lastError = error;
+        
+        if (attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // If all retries failed, try base64 fallback for small files
+    if (file.size < 1024 * 1024) { // Less than 1MB
+      try {
+        console.log('🔄 Trying base64 fallback...');
+        const base64 = await fileToBase64(file);
+        console.log('✅ Base64 conversion successful');
+        return base64;
+      } catch (base64Error) {
+        console.error('❌ Base64 fallback also failed:', base64Error);
+      }
+    }
+
+    throw lastError || new Error('Upload failed after retries');
   } catch (error) {
     console.error('❌ Error uploading file with progress:', error);
     throw error;
   }
 };
 
-// ✅ Delete file from Firebase Storage
-export const deleteFileFromFirebase = async (filePath) => {
+// ============================================
+// ✅ Delete file from Firebase Storage (with retry)
+// ============================================
+
+export const deleteFileFromFirebase = async (filePath, retries = 3) => {
   try {
     if (!filePath) {
       throw new Error('No file path provided');
     }
-    return await deleteFile(filePath);
+
+    console.log('🗑️ Deleting file from Firebase Storage:', filePath);
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        await deleteFile(filePath);
+        console.log(`✅ File deleted on attempt ${attempt}:`, filePath);
+        return true;
+      } catch (error) {
+        console.error(`❌ Delete attempt ${attempt} failed:`, error);
+        lastError = error;
+        
+        if (attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    throw lastError || new Error('Delete failed after retries');
   } catch (error) {
     console.error('❌ Error deleting file:', error);
     throw error;
   }
 };
 
-// ✅ Get file URL from Firebase Storage
-export const getFileUrlFromFirebase = async (filePath) => {
+// ============================================
+// ✅ Get file URL from Firebase Storage (with retry)
+// ============================================
+
+export const getFileUrlFromFirebase = async (filePath, retries = 3) => {
   try {
     if (!filePath) {
       throw new Error('No file path provided');
     }
-    return await getFileUrl(filePath);
+
+    console.log('📤 Getting file URL:', filePath);
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const url = await getFileUrl(filePath);
+        console.log(`✅ Got URL on attempt ${attempt}:`, url);
+        return url;
+      } catch (error) {
+        console.error(`❌ Get URL attempt ${attempt} failed:`, error);
+        lastError = error;
+        
+        if (attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    throw lastError || new Error('Get URL failed after retries');
   } catch (error) {
     console.error('❌ Error getting file URL:', error);
     throw error;
   }
 };
+
+
+
+
 
 // ============================================
 // ADMIN FUNCTIONS
