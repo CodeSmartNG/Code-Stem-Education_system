@@ -27,14 +27,19 @@ const apiCall = async (endpoint, options = {}) => {
     delete config.headers['Content-Type'];
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, config);
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
+    if (!response.ok) {
+      throw new Error(data.message || 'API request failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
   }
-
-  return data;
 };
 
 export const api = {
@@ -58,6 +63,23 @@ export const api = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
+
+  // ============================================
+  // USERS
+  // ============================================
+  
+  getUsers: () => apiCall('/users'),
+  
+  getUserById: (id) => apiCall(`/users/${id}`),
+  
+  updateUser: (id, data) => apiCall(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  
+  deleteUser: (id) => apiCall(`/users/${id}`, {
+    method: 'DELETE'
+  }),
 
   // ============================================
   // COURSES
@@ -128,22 +150,5 @@ export const api = {
       method: 'POST',
       body: formData
     });
-  },
-
-  // ============================================
-  // USERS
-  // ============================================
-  
-  getUsers: () => apiCall('/users'),
-  
-  getUserById: (id) => apiCall(`/users/${id}`),
-  
-  updateUser: (id, data) => apiCall(`/users/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data)
-  }),
-  
-  deleteUser: (id) => apiCall(`/users/${id}`, {
-    method: 'DELETE'
-  })
+  }
 };
