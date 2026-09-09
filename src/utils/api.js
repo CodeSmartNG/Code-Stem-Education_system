@@ -2,33 +2,148 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Helper to get auth token
+const getToken = () => localStorage.getItem('token');
+
+// Helper for API calls
+const apiCall = async (endpoint, options = {}) => {
+  const token = getToken();
+  
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+
+  const config = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
+  };
+
+  // If FormData, remove Content-Type (browser will set it)
+  if (options.body instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, config);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'API request failed');
+  }
+
+  return data;
+};
+
 export const api = {
-  // Auth
-  register: (data) => fetch(`${API_URL}/auth/register`, {
+  // ============================================
+  // AUTH
+  // ============================================
+  
+  register: (userData) => apiCall('/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  }).then(res => res.json()),
+    body: JSON.stringify(userData)
+  }),
 
-  login: (data) => fetch(`${API_URL}/auth/login`, {
+  login: (credentials) => apiCall('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials)
+  }),
+
+  getMe: () => apiCall('/auth/me'),
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+
+  // ============================================
+  // COURSES
+  // ============================================
+  
+  getCourses: () => apiCall('/courses'),
+  
+  getCourseById: (id) => apiCall(`/courses/${id}`),
+  
+  createCourse: (data) => apiCall('/courses', {
+    method: 'POST',
     body: JSON.stringify(data)
-  }).then(res => res.json()),
+  }),
+  
+  updateCourse: (id, data) => apiCall(`/courses/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  
+  deleteCourse: (id) => apiCall(`/courses/${id}`, {
+    method: 'DELETE'
+  }),
+  
+  publishCourse: (id, isPublished) => apiCall(`/courses/${id}/publish`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isPublished })
+  }),
 
-  // Courses
-  getCourses: () => fetch(`${API_URL}/courses`, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-  }).then(res => res.json()),
+  // ============================================
+  // LESSONS
+  // ============================================
+  
+  getLessons: (courseId) => apiCall(`/lessons?courseId=${courseId}`),
+  
+  getLessonById: (id) => apiCall(`/lessons/${id}`),
+  
+  createLesson: (data) => apiCall('/lessons', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  
+  updateLesson: (id, data) => apiCall(`/lessons/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  
+  deleteLesson: (id) => apiCall(`/lessons/${id}`, {
+    method: 'DELETE'
+  }),
 
-  // Upload
+  // ============================================
+  // UPLOAD
+  // ============================================
+  
   uploadVideo: (file) => {
     const formData = new FormData();
     formData.append('video', file);
-    return fetch(`${API_URL}/upload/video`, {
+    return apiCall('/upload/video', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: formData
-    }).then(res => res.json());
-  }
+    });
+  },
+  
+  uploadMultimedia: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiCall('/upload/multimedia', {
+      method: 'POST',
+      body: formData
+    });
+  },
+
+  // ============================================
+  // USERS
+  // ============================================
+  
+  getUsers: () => apiCall('/users'),
+  
+  getUserById: (id) => apiCall(`/users/${id}`),
+  
+  updateUser: (id, data) => apiCall(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  
+  deleteUser: (id) => apiCall(`/users/${id}`, {
+    method: 'DELETE'
+  })
 };
