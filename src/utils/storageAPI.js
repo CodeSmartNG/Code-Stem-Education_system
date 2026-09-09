@@ -3,11 +3,37 @@
 import { api } from './api';
 
 // ============================================
+// INITIALIZATION
+// ============================================
+
+export const initializeStorage = async () => {
+  try {
+    console.log('🔄 Initializing backend storage...');
+    // Check if user is already logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+      const user = await getCurrentUser();
+      if (user) {
+        console.log('✅ User already logged in:', user.name);
+      }
+    }
+    console.log('✅ Backend storage initialized');
+    return true;
+  } catch (error) {
+    console.error('❌ Error initializing storage:', error);
+    return false;
+  }
+};
+
+// ============================================
 // USER MANAGEMENT
 // ============================================
 
 export const getCurrentUser = async () => {
   try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    
     const response = await api.getMe();
     return response.user;
   } catch (error) {
@@ -37,7 +63,7 @@ export const registerUser = async (userData) => {
     if (response.success) {
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      return response.user;
+      return { user: response.user, confirmationToken: 'email_verification_sent' };
     }
     return null;
   } catch (error) {
@@ -49,6 +75,63 @@ export const registerUser = async (userData) => {
 export const logoutUser = async () => {
   api.logout();
   return true;
+};
+
+export const getUsers = async () => {
+  try {
+    const response = await api.getUsers();
+    return response.data || [];
+  } catch (error) {
+    console.error('Error getting users:', error);
+    return [];
+  }
+};
+
+export const getStudents = async () => {
+  try {
+    const users = await getUsers();
+    return users.filter(u => u.role === 'student');
+  } catch (error) {
+    console.error('Error getting students:', error);
+    return [];
+  }
+};
+
+export const updateStudent = async (student) => {
+  try {
+    const response = await api.updateUser(student.id, student);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating student:', error);
+    throw error;
+  }
+};
+
+export const confirmUserEmail = async (token) => {
+  try {
+    // Implement email confirmation endpoint
+    const response = await apiCall('/auth/confirm-email', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+    return response.user;
+  } catch (error) {
+    console.error('Error confirming email:', error);
+    throw error;
+  }
+};
+
+export const resendEmailConfirmation = async (email) => {
+  try {
+    const response = await apiCall('/auth/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    return response;
+  } catch (error) {
+    console.error('Error resending confirmation:', error);
+    throw error;
+  }
 };
 
 // ============================================
@@ -105,13 +188,31 @@ export const deleteCourse = async (courseId) => {
   }
 };
 
-export const publishCourse = async (courseId, isPublished) => {
+export const getTeacherStats = async (teacherId) => {
   try {
-    const response = await api.publishCourse(courseId, isPublished);
-    return response.data;
+    const courses = await getCoursesByTeacher(teacherId);
+    const students = await getStudents();
+    
+    let totalStudents = 0;
+    let totalLessons = 0;
+    
+    for (const course of courses) {
+      totalLessons += course.lessonIds?.length || 0;
+      totalStudents += course.enrolledStudents || 0;
+    }
+    
+    return {
+      totalCourses: courses.length,
+      totalLessons: totalLessons,
+      totalStudents: totalStudents
+    };
   } catch (error) {
-    console.error('Error publishing course:', error);
-    throw error;
+    console.error('Error getting teacher stats:', error);
+    return {
+      totalCourses: 0,
+      totalLessons: 0,
+      totalStudents: 0
+    };
   }
 };
 
@@ -167,7 +268,6 @@ export const deleteLesson = async (lessonId) => {
 // ============================================
 
 export const uploadFileToFirebase = async (file, path) => {
-  // This will use your backend instead of Firebase Storage
   try {
     const response = await api.uploadVideo(file);
     return response.data.url;
@@ -177,12 +277,50 @@ export const uploadFileToFirebase = async (file, path) => {
   }
 };
 
-export const uploadMultimedia = async (file) => {
+export const addMultimediaToLesson = async (lessonId, multimediaData) => {
   try {
-    const response = await api.uploadMultimedia(file);
+    const response = await apiCall('/multimedia', {
+      method: 'POST',
+      body: JSON.stringify({
+        lessonId,
+        ...multimediaData
+      })
+    });
     return response.data;
   } catch (error) {
-    console.error('Error uploading multimedia:', error);
+    console.error('Error adding multimedia:', error);
+    throw error;
+  }
+};
+
+export const deleteMultimedia = async (multimediaId) => {
+  try {
+    await apiCall(`/multimedia/${multimediaId}`, {
+      method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error('Error deleting multimedia:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// QUIZ MANAGEMENT
+// ============================================
+
+export const createQuiz = async (lessonId, quizData) => {
+  try {
+    const response = await apiCall('/quizzes', {
+      method: 'POST',
+      body: JSON.stringify({
+        lessonId,
+        ...quizData
+      })
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating quiz:', error);
     throw error;
   }
 };
@@ -211,16 +349,27 @@ export const getTeacherWallet = async (teacherId) => {
   }
 };
 
+export const updateTeacherWallet = async (teacherId, walletData) => {
+  try {
+    const response = await api.updateUser(teacherId, {
+      wallet: walletData
+    });
+    return response.data?.wallet;
+  } catch (error) {
+    console.error('Error updating teacher wallet:', error);
+    throw error;
+  }
+};
+
 export const withdrawFromWallet = async (teacherId, amount, bankDetails) => {
   try {
-    // Implement withdrawal endpoint in backend
     const response = await apiCall('/wallet/withdraw', {
       method: 'POST',
       body: JSON.stringify({ teacherId, amount, bankDetails })
     });
     return response.data;
   } catch (error) {
-    console.error('Error withdrawing:', error);
+    console.error('Error withdrawing from wallet:', error);
     throw error;
   }
 };
@@ -260,10 +409,10 @@ export const getTeacherWhatsAppNumber = async (teacherId) => {
 // ============================================
 
 export const canAccessLesson = async (userId, courseKey, lessonId) => {
-  // Implement in backend
   try {
     const response = await apiCall(`/lessons/${lessonId}/access`, {
-      method: 'GET'
+      method: 'GET',
+      params: { userId, courseKey }
     });
     return response.data?.hasAccess || false;
   } catch (error) {
@@ -286,31 +435,186 @@ export const purchaseLesson = async (userId, courseKey, lessonId) => {
 };
 
 // ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+export const getAllCoursesForAdmin = async () => {
+  try {
+    const response = await api.getCourses();
+    return response.data || [];
+  } catch (error) {
+    console.error('Error getting all courses:', error);
+    return [];
+  }
+};
+
+export const getCourseDetailsForAdmin = async (courseId) => {
+  try {
+    const response = await api.getCourseById(courseId);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting course details:', error);
+    return null;
+  }
+};
+
+export const getAllTeachers = async () => {
+  try {
+    const users = await getUsers();
+    return users.filter(u => u.role === 'teacher');
+  } catch (error) {
+    console.error('Error getting all teachers:', error);
+    return [];
+  }
+};
+
+export const getPendingTeachers = async () => {
+  try {
+    const teachers = await getAllTeachers();
+    return teachers.filter(t => !t.isApproved);
+  } catch (error) {
+    console.error('Error getting pending teachers:', error);
+    return [];
+  }
+};
+
+export const approveTeacher = async (teacherId) => {
+  try {
+    const response = await api.updateUser(teacherId, {
+      isApproved: true,
+      approvedDate: new Date().toISOString()
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error approving teacher:', error);
+    throw error;
+  }
+};
+
+export const rejectTeacher = async (teacherId) => {
+  try {
+    const response = await api.updateUser(teacherId, {
+      isApproved: false,
+      rejectedAt: new Date().toISOString(),
+      status: 'rejected'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting teacher:', error);
+    throw error;
+  }
+};
+
+export const dismissTeacher = async (teacherId) => {
+  try {
+    const response = await api.updateUser(teacherId, {
+      isApproved: false,
+      dismissedAt: new Date().toISOString(),
+      status: 'dismissed'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error dismissing teacher:', error);
+    throw error;
+  }
+};
+
+export const getPlatformStats = async () => {
+  try {
+    const users = await getUsers();
+    const courses = await getCourses();
+    
+    const students = users.filter(u => u.role === 'student');
+    const teachers = users.filter(u => u.role === 'teacher' && u.isApproved);
+    
+    let totalLessons = 0;
+    for (const course of courses) {
+      totalLessons += course.lessonIds?.length || 0;
+    }
+    
+    return {
+      totalStudents: students.length,
+      totalTeachers: teachers.length,
+      totalCourses: courses.length,
+      totalLessons: totalLessons,
+      totalEnrolled: courses.reduce((sum, c) => sum + (c.enrolledStudents || 0), 0),
+      totalCompletedLessons: 0
+    };
+  } catch (error) {
+    console.error('Error getting platform stats:', error);
+    return {
+      totalStudents: 0,
+      totalTeachers: 0,
+      totalCourses: 0,
+      totalLessons: 0,
+      totalEnrolled: 0,
+      totalCompletedLessons: 0
+    };
+  }
+};
+
+// ============================================
 // EXPORT ALL
 // ============================================
 
 export default {
+  // User Management
   getCurrentUser,
   authenticateUser,
   registerUser,
   logoutUser,
+  getUsers,
+  getStudents,
+  updateStudent,
+  confirmUserEmail,
+  resendEmailConfirmation,
+  
+  // Course Management
   getCourses,
   getCoursesByTeacher,
   createCourse,
   updateCourse,
   deleteCourse,
-  publishCourse,
+  getTeacherStats,
+  
+  // Lesson Management
   getLessonsByCourse,
   createLesson,
   updateLesson,
   deleteLesson,
+  
+  // Multimedia
   uploadFileToFirebase,
-  uploadMultimedia,
+  addMultimediaToLesson,
+  deleteMultimedia,
+  
+  // Quiz
+  createQuiz,
+  
+  // Wallet & Payment
   getTeacherWallet,
+  updateTeacherWallet,
   withdrawFromWallet,
+  
+  // WhatsApp
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
+  
+  // Lesson Access & Purchase
   canAccessLesson,
-  purchaseLesson
+  purchaseLesson,
+  
+  // Admin
+  getAllCoursesForAdmin,
+  getCourseDetailsForAdmin,
+  getAllTeachers,
+  getPendingTeachers,
+  approveTeacher,
+  rejectTeacher,
+  dismissTeacher,
+  getPlatformStats,
+  
+  // Storage
+  initializeStorage
 };
