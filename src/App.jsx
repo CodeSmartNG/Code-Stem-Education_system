@@ -1,4 +1,4 @@
-// src/App.jsx
+// App.jsx - Updated with Backend API
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
@@ -23,9 +23,9 @@ import Blog from './components/Blog';
 import Resources from './components/Resources';
 import Careers from './components/Careers';
 import Support from './components/Support';
-// ✅ Import SetupDemo
 import SetupDemo from './pages/SetupDemo';
 
+// ✅ NEW: Import from Backend API instead of Firebase storage
 import { 
   initializeStorage, 
   getStudents, 
@@ -40,14 +40,20 @@ import {
   canAccessLesson,
   purchaseLesson,
   getTeacherWhatsAppUrl
-} from './utils/storage';
+} from './utils/storageAPI';
 
-// Constants moved outside component
+// ============================================
+// CONSTANTS
+// ============================================
+
 const USER_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 const INACTIVITY_WARNING_TIME = 55 * 60 * 1000;
 const INACTIVITY_LOGOUT_TIME = 60 * 60 * 1000;
 
-// Debug function to check admin status
+// ============================================
+// DEBUG FUNCTIONS
+// ============================================
+
 const debugAdminStatus = () => {
   try {
     console.log('=== ADMIN STATUS DEBUG ===');
@@ -69,7 +75,6 @@ const debugAdminStatus = () => {
   }
 };
 
-// Safe object utility function
 const safeObjectEntries = (obj, location = 'unknown') => {
   console.log(`🔧 safeObjectEntries called from: ${location}`, obj);
   try {
@@ -94,6 +99,10 @@ const safeObjectEntries = (obj, location = 'unknown') => {
   }
 };
 
+// ============================================
+// APP COMPONENT
+// ============================================
+
 function App() {
   const [currentView, setCurrentView] = useState('login');
   const [currentUser, setCurrentUserState] = useState(null);
@@ -110,7 +119,10 @@ function App() {
   const logoutTimerRef = useRef(null);
   const warningTimerRef = useRef(null);
 
-  // Define handleLogout first so it can be used in other hooks
+  // ============================================
+  // LOGOUT
+  // ============================================
+
   const handleLogout = useCallback(async () => {
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
@@ -128,13 +140,11 @@ function App() {
     localStorage.removeItem('hausaStem_currentView');
   }, []);
 
-  // Auto-logout handler
   const handleAutoLogout = useCallback(() => {
     setMessage('You have been automatically logged out due to inactivity.');
     handleLogout();
   }, [handleLogout]);
 
-  // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
@@ -154,7 +164,6 @@ function App() {
     }
   }, [currentUser, handleAutoLogout]);
 
-  // Handle user activity
   const handleUserActivity = useCallback(() => {
     if (currentUser) {
       resetInactivityTimer();
@@ -164,7 +173,10 @@ function App() {
     }
   }, [currentUser, resetInactivityTimer, showInactivityWarning]);
 
-  // Define handleEmailConfirmation before it's used in useEffect
+  // ============================================
+  // EMAIL CONFIRMATION
+  // ============================================
+
   const handleEmailConfirmation = useCallback(async (token) => {
     try {
       const user = await confirmUserEmail(token);
@@ -185,7 +197,10 @@ function App() {
     }
   }, []);
 
-  // Handle payment completion
+  // ============================================
+  // PAYMENT HANDLERS
+  // ============================================
+
   const handlePaymentComplete = useCallback(async (paymentData) => {
     try {
       console.log('Payment completed:', paymentData);
@@ -214,7 +229,6 @@ function App() {
     }
   }, [currentUser]);
 
-  // Handle transaction update
   const handleTransactionUpdate = useCallback(async (transaction) => {
     try {
       console.log('Transaction updated:', transaction);
@@ -229,11 +243,14 @@ function App() {
     }
   }, [currentUser]);
 
-  // Initialize storage and load data
+  // ============================================
+  // INITIALIZATION
+  // ============================================
+
   useEffect(() => {
     const initApp = async () => {
       try {
-        console.log('🔄 Initializing storage...');
+        console.log('🔄 Initializing app...');
         await initializeStorage();
 
         const loadedStudents = await getStudents();
@@ -283,7 +300,10 @@ function App() {
     initApp();
   }, []);
 
-  // Set up activity listeners when user is logged in
+  // ============================================
+  // ACTIVITY LISTENERS
+  // ============================================
+
   useEffect(() => {
     if (currentUser) {
       USER_ACTIVITY_EVENTS.forEach(event => {
@@ -306,7 +326,10 @@ function App() {
     }
   }, [currentUser, handleUserActivity, resetInactivityTimer]);
 
-  // Check for confirmation token in URL
+  // ============================================
+  // URL TOKEN CHECK
+  // ============================================
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -315,7 +338,10 @@ function App() {
     }
   }, [handleEmailConfirmation]);
 
-  // Login handler
+  // ============================================
+  // LOGIN HANDLER
+  // ============================================
+
   const handleLogin = useCallback(async (email, password) => {
     try {
       console.log('🔐 Attempting login with email:', email);
@@ -360,6 +386,10 @@ function App() {
       return false;
     }
   }, [resetInactivityTimer]);
+
+  // ============================================
+  // REGISTRATION HANDLERS
+  // ============================================
 
   const handleStudentRegister = useCallback(async (name, email, password) => {
     try {
@@ -443,6 +473,10 @@ function App() {
     }
   }, [pendingUser]);
 
+  // ============================================
+  // USER UPDATE HANDLERS
+  // ============================================
+
   const updateStudentData = useCallback(async (updatedStudent) => {
     try {
       await updateStudent(updatedStudent);
@@ -471,6 +505,10 @@ function App() {
       console.error('Error updating user:', error);
     }
   }, []);
+
+  // ============================================
+  // LESSON HANDLERS
+  // ============================================
 
   const handleLessonPurchase = useCallback(async (courseKey, lessonId) => {
     try {
@@ -507,7 +545,10 @@ function App() {
     return getTeacherWhatsAppUrl(teacherId);
   }, []);
 
-  // Inactivity Warning Modal Component
+  // ============================================
+  // UI COMPONENTS
+  // ============================================
+
   const InactivityWarning = useCallback(() => {
     if (!showInactivityWarning) return null;
 
@@ -584,7 +625,10 @@ function App() {
     );
   }, [message]);
 
-  // If there's an initialization error, show a friendly error message
+  // ============================================
+  // ERROR SCREEN
+  // ============================================
+
   if (initError) {
     return (
       <div className="error-screen">
@@ -595,7 +639,10 @@ function App() {
     );
   }
 
-  // Render view based on current view and user role
+  // ============================================
+  // RENDER VIEW
+  // ============================================
+
   const renderView = useCallback(() => {
     console.log('🎯 renderView called with currentView:', currentView);
     console.log('🎯 currentUser:', currentUser);
@@ -656,7 +703,6 @@ function App() {
               />
             </>
           );
-        // ✅ SETUP ROUTE - ADDED HERE
         case 'setup':
           return <SetupDemo />;
         case 'login':
@@ -690,7 +736,7 @@ function App() {
     console.log('🎯 User roles - Admin:', isAdmin, 'Teacher:', isTeacher, 'Student:', isStudent);
     console.log('🎯 Current view:', currentView);
 
-    // Check if currentView matches user role, if not, redirect
+    // Check if currentView matches user role
     if (isAdmin && currentView !== 'admin' && currentView !== 'admin-courses') {
       console.log('👑 Admin user, ensuring admin view');
       setTimeout(() => setCurrentView('admin'), 0);
@@ -703,7 +749,7 @@ function App() {
       return null;
     }
 
-    // Handle general navigation views (accessible to all logged-in users)
+    // General navigation views
     console.log('🎯 Checking general navigation views for:', currentView);
     switch(currentView) {
       case 'about':
@@ -749,7 +795,7 @@ function App() {
         break;
     }
 
-    // Admin dashboard - explicit check
+    // Admin dashboard
     if (isAdmin) {
       console.log('🎯 Rendering admin dashboard');
       if (currentView === 'admin') {
@@ -811,7 +857,7 @@ function App() {
       }
     }
 
-    // Default fallback - if no view matched, show appropriate dashboard
+    // Default fallback
     console.warn('⚠️ No specific view matched, showing default dashboard');
     if (isAdmin) {
       return <AdminDashboard currentUser={currentUser} setCurrentView={setCurrentView} />;
@@ -854,13 +900,17 @@ function App() {
     pendingUser
   ]);
 
+  // ============================================
+  // LOADING SCREEN
+  // ============================================
+
   if (!isInitialized) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
         <p>Loading your learning experience...</p>
         <p className="loading-version">v1.0.0 • STEM Education Platform</p>
-        <p className="loading-powered">Powered by Firebase</p>
+        <p className="loading-powered">Powered by Custom Backend</p>
       </div>
     );
   }
@@ -868,6 +918,10 @@ function App() {
   console.log('🎯 Rendering main App component');
   console.log('🎯 Current user:', currentUser);
   console.log('🎯 Current view:', currentView);
+
+  // ============================================
+  // MAIN APP RENDER
+  // ============================================
 
   return (
     <div className="App">
