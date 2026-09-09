@@ -1,6 +1,6 @@
 // src/utils/storageAPI.js
 
-import { api } from './api';
+import api, { apiCall } from './api'; // ← FIXED: import apiCall
 
 // ============================================
 // INITIALIZATION
@@ -9,7 +9,6 @@ import { api } from './api';
 export const initializeStorage = async () => {
   try {
     console.log('🔄 Initializing backend storage...');
-    // Check if user is already logged in
     const token = localStorage.getItem('token');
     if (token) {
       const user = await getCurrentUser();
@@ -33,7 +32,7 @@ export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem('token');
     if (!token) return null;
-    
+
     const response = await api.getMe();
     return response.user;
   } catch (error) {
@@ -59,13 +58,29 @@ export const authenticateUser = async (email, password) => {
 
 export const registerUser = async (userData) => {
   try {
-    const response = await api.register(userData);
+    // Transform data for backend
+    const registerData = {
+      fullName: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role || 'student'
+    };
+
+    const response = await api.register(registerData);
+    
     if (response.success) {
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      return { user: response.user, confirmationToken: 'email_verification_sent' };
+      // Store token if returned
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
+      
+      return { 
+        user: response.user || userData, 
+        confirmationToken: response.verificationToken || 'email_verification_sent' 
+      };
     }
-    return null;
+    throw new Error('Registration failed');
   } catch (error) {
     console.error('Register error:', error);
     throw error;
@@ -80,7 +95,7 @@ export const logoutUser = async () => {
 export const getUsers = async () => {
   try {
     const response = await api.getUsers();
-    return response.data || [];
+    return response.users || [];
   } catch (error) {
     console.error('Error getting users:', error);
     return [];
@@ -100,7 +115,7 @@ export const getStudents = async () => {
 export const updateStudent = async (student) => {
   try {
     const response = await api.updateUser(student.id, student);
-    return response.data;
+    return response.user;
   } catch (error) {
     console.error('Error updating student:', error);
     throw error;
@@ -109,11 +124,7 @@ export const updateStudent = async (student) => {
 
 export const confirmUserEmail = async (token) => {
   try {
-    // Implement email confirmation endpoint
-    const response = await apiCall('/auth/confirm-email', {
-      method: 'POST',
-      body: JSON.stringify({ token })
-    });
+    const response = await api.confirmEmail(token);
     return response.user;
   } catch (error) {
     console.error('Error confirming email:', error);
@@ -123,10 +134,7 @@ export const confirmUserEmail = async (token) => {
 
 export const resendEmailConfirmation = async (email) => {
   try {
-    const response = await apiCall('/auth/resend-confirmation', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
+    const response = await api.resendConfirmation(email);
     return response;
   } catch (error) {
     console.error('Error resending confirmation:', error);
@@ -141,7 +149,7 @@ export const resendEmailConfirmation = async (email) => {
 export const getCourses = async () => {
   try {
     const response = await api.getCourses();
-    return response.data || [];
+    return response.courses || [];
   } catch (error) {
     console.error('Error getting courses:', error);
     return [];
@@ -161,7 +169,7 @@ export const getCoursesByTeacher = async (teacherId) => {
 export const createCourse = async (courseData) => {
   try {
     const response = await api.createCourse(courseData);
-    return response.data;
+    return response.course;
   } catch (error) {
     console.error('Error creating course:', error);
     throw error;
@@ -171,7 +179,7 @@ export const createCourse = async (courseData) => {
 export const updateCourse = async (courseId, updateData) => {
   try {
     const response = await api.updateCourse(courseId, updateData);
-    return response.data;
+    return response.course;
   } catch (error) {
     console.error('Error updating course:', error);
     throw error;
@@ -192,15 +200,15 @@ export const getTeacherStats = async (teacherId) => {
   try {
     const courses = await getCoursesByTeacher(teacherId);
     const students = await getStudents();
-    
+
     let totalStudents = 0;
     let totalLessons = 0;
-    
+
     for (const course of courses) {
       totalLessons += course.lessonIds?.length || 0;
       totalStudents += course.enrolledStudents || 0;
     }
-    
+
     return {
       totalCourses: courses.length,
       totalLessons: totalLessons,
@@ -223,7 +231,7 @@ export const getTeacherStats = async (teacherId) => {
 export const getLessonsByCourse = async (courseId) => {
   try {
     const response = await api.getLessons(courseId);
-    return response.data || [];
+    return response.lessons || [];
   } catch (error) {
     console.error('Error getting lessons:', error);
     return [];
@@ -236,7 +244,7 @@ export const createLesson = async (courseId, lessonData) => {
       ...lessonData,
       courseId
     });
-    return response.data;
+    return response.lesson;
   } catch (error) {
     console.error('Error creating lesson:', error);
     throw error;
@@ -246,7 +254,7 @@ export const createLesson = async (courseId, lessonData) => {
 export const updateLesson = async (lessonId, updateData) => {
   try {
     const response = await api.updateLesson(lessonId, updateData);
-    return response.data;
+    return response.lesson;
   } catch (error) {
     console.error('Error updating lesson:', error);
     throw error;
@@ -270,137 +278,10 @@ export const deleteLesson = async (lessonId) => {
 export const uploadFileToFirebase = async (file, path) => {
   try {
     const response = await api.uploadVideo(file);
-    return response.data.url;
+    return response.url;
   } catch (error) {
     console.error('Error uploading file:', error);
     throw error;
-  }
-};
-
-export const addMultimediaToLesson = async (lessonId, multimediaData) => {
-  try {
-    const response = await apiCall('/multimedia', {
-      method: 'POST',
-      body: JSON.stringify({
-        lessonId,
-        ...multimediaData
-      })
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error adding multimedia:', error);
-    throw error;
-  }
-};
-
-export const deleteMultimedia = async (multimediaId) => {
-  try {
-    await apiCall(`/multimedia/${multimediaId}`, {
-      method: 'DELETE'
-    });
-    return true;
-  } catch (error) {
-    console.error('Error deleting multimedia:', error);
-    throw error;
-  }
-};
-
-// ============================================
-// QUIZ MANAGEMENT
-// ============================================
-
-export const createQuiz = async (lessonId, quizData) => {
-  try {
-    const response = await apiCall('/quizzes', {
-      method: 'POST',
-      body: JSON.stringify({
-        lessonId,
-        ...quizData
-      })
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error creating quiz:', error);
-    throw error;
-  }
-};
-
-// ============================================
-// WALLET & PAYMENTS
-// ============================================
-
-export const getTeacherWallet = async (teacherId) => {
-  try {
-    const response = await api.getUserById(teacherId);
-    return response.data?.wallet || {
-      balance: 0,
-      totalEarnings: 0,
-      pendingWithdrawals: 0,
-      transactions: []
-    };
-  } catch (error) {
-    console.error('Error getting teacher wallet:', error);
-    return {
-      balance: 0,
-      totalEarnings: 0,
-      pendingWithdrawals: 0,
-      transactions: []
-    };
-  }
-};
-
-export const updateTeacherWallet = async (teacherId, walletData) => {
-  try {
-    const response = await api.updateUser(teacherId, {
-      wallet: walletData
-    });
-    return response.data?.wallet;
-  } catch (error) {
-    console.error('Error updating teacher wallet:', error);
-    throw error;
-  }
-};
-
-export const withdrawFromWallet = async (teacherId, amount, bankDetails) => {
-  try {
-    const response = await apiCall('/wallet/withdraw', {
-      method: 'POST',
-      body: JSON.stringify({ teacherId, amount, bankDetails })
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error withdrawing from wallet:', error);
-    throw error;
-  }
-};
-
-// ============================================
-// WHATSAPP
-// ============================================
-
-export const updateTeacherProfileWithWhatsApp = async (teacherId, data) => {
-  try {
-    const response = await api.updateUser(teacherId, {
-      whatsappNumber: data.whatsappNumber
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating WhatsApp:', error);
-    throw error;
-  }
-};
-
-export const getTeacherWhatsAppUrl = (teacherId) => {
-  return `https://wa.me/${teacherId}`;
-};
-
-export const getTeacherWhatsAppNumber = async (teacherId) => {
-  try {
-    const response = await api.getUserById(teacherId);
-    return response.data?.whatsappNumber || '';
-  } catch (error) {
-    console.error('Error getting WhatsApp number:', error);
-    return '';
   }
 };
 
@@ -414,7 +295,7 @@ export const canAccessLesson = async (userId, courseKey, lessonId) => {
       method: 'GET',
       params: { userId, courseKey }
     });
-    return response.data?.hasAccess || false;
+    return response.hasAccess || false;
   } catch (error) {
     console.error('Error checking access:', error);
     return false;
@@ -423,13 +304,42 @@ export const canAccessLesson = async (userId, courseKey, lessonId) => {
 
 export const purchaseLesson = async (userId, courseKey, lessonId) => {
   try {
-    const response = await apiCall('/lessons/purchase', {
-      method: 'POST',
-      body: JSON.stringify({ userId, courseKey, lessonId })
+    const response = await api.purchaseLesson({ 
+      userId, 
+      courseKey, 
+      lessonId 
     });
     return response.success;
   } catch (error) {
     console.error('Error purchasing lesson:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// WHATSAPP
+// ============================================
+
+export const getTeacherWhatsAppUrl = (teacherId) => {
+  return `https://wa.me/${teacherId}`;
+};
+
+export const getTeacherWhatsAppNumber = async (teacherId) => {
+  try {
+    const response = await api.getUserById(teacherId);
+    return response.user?.whatsappNumber || '';
+  } catch (error) {
+    console.error('Error getting WhatsApp number:', error);
+    return '';
+  }
+};
+
+export const updateTeacherProfileWithWhatsApp = async (teacherId, data) => {
+  try {
+    const response = await api.updateWhatsApp(teacherId, data.whatsappNumber);
+    return response.user;
+  } catch (error) {
+    console.error('Error updating WhatsApp:', error);
     throw error;
   }
 };
@@ -441,7 +351,7 @@ export const purchaseLesson = async (userId, courseKey, lessonId) => {
 export const getAllCoursesForAdmin = async () => {
   try {
     const response = await api.getCourses();
-    return response.data || [];
+    return response.courses || [];
   } catch (error) {
     console.error('Error getting all courses:', error);
     return [];
@@ -451,7 +361,7 @@ export const getAllCoursesForAdmin = async () => {
 export const getCourseDetailsForAdmin = async (courseId) => {
   try {
     const response = await api.getCourseById(courseId);
-    return response.data;
+    return response.course;
   } catch (error) {
     console.error('Error getting course details:', error);
     return null;
@@ -480,11 +390,8 @@ export const getPendingTeachers = async () => {
 
 export const approveTeacher = async (teacherId) => {
   try {
-    const response = await api.updateUser(teacherId, {
-      isApproved: true,
-      approvedDate: new Date().toISOString()
-    });
-    return response.data;
+    const response = await api.approveTeacher(teacherId);
+    return response.user;
   } catch (error) {
     console.error('Error approving teacher:', error);
     throw error;
@@ -493,12 +400,8 @@ export const approveTeacher = async (teacherId) => {
 
 export const rejectTeacher = async (teacherId) => {
   try {
-    const response = await api.updateUser(teacherId, {
-      isApproved: false,
-      rejectedAt: new Date().toISOString(),
-      status: 'rejected'
-    });
-    return response.data;
+    const response = await api.rejectTeacher(teacherId);
+    return response.user;
   } catch (error) {
     console.error('Error rejecting teacher:', error);
     throw error;
@@ -512,7 +415,7 @@ export const dismissTeacher = async (teacherId) => {
       dismissedAt: new Date().toISOString(),
       status: 'dismissed'
     });
-    return response.data;
+    return response.user;
   } catch (error) {
     console.error('Error dismissing teacher:', error);
     throw error;
@@ -521,25 +424,8 @@ export const dismissTeacher = async (teacherId) => {
 
 export const getPlatformStats = async () => {
   try {
-    const users = await getUsers();
-    const courses = await getCourses();
-    
-    const students = users.filter(u => u.role === 'student');
-    const teachers = users.filter(u => u.role === 'teacher' && u.isApproved);
-    
-    let totalLessons = 0;
-    for (const course of courses) {
-      totalLessons += course.lessonIds?.length || 0;
-    }
-    
-    return {
-      totalStudents: students.length,
-      totalTeachers: teachers.length,
-      totalCourses: courses.length,
-      totalLessons: totalLessons,
-      totalEnrolled: courses.reduce((sum, c) => sum + (c.enrolledStudents || 0), 0),
-      totalCompletedLessons: 0
-    };
+    const response = await api.getPlatformStats();
+    return response.stats;
   } catch (error) {
     console.error('Error getting platform stats:', error);
     return {
@@ -550,6 +436,75 @@ export const getPlatformStats = async () => {
       totalEnrolled: 0,
       totalCompletedLessons: 0
     };
+  }
+};
+
+// ============================================
+// WALLET & PAYMENTS
+// ============================================
+
+export const getTeacherWallet = async (teacherId) => {
+  try {
+    const response = await api.getUserById(teacherId);
+    return response.user?.wallet || {
+      balance: 0,
+      totalEarnings: 0,
+      pendingWithdrawals: 0,
+      transactions: []
+    };
+  } catch (error) {
+    console.error('Error getting teacher wallet:', error);
+    return {
+      balance: 0,
+      totalEarnings: 0,
+      pendingWithdrawals: 0,
+      transactions: []
+    };
+  }
+};
+
+export const updateTeacherWallet = async (teacherId, walletData) => {
+  try {
+    const response = await api.updateUser(teacherId, {
+      wallet: walletData
+    });
+    return response.user?.wallet;
+  } catch (error) {
+    console.error('Error updating teacher wallet:', error);
+    throw error;
+  }
+};
+
+export const withdrawFromWallet = async (teacherId, amount, bankDetails) => {
+  try {
+    const response = await apiCall('/wallet/withdraw', {
+      method: 'POST',
+      body: { teacherId, amount, bankDetails }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error withdrawing from wallet:', error);
+    throw error;
+  }
+};
+
+// ============================================
+// QUIZ MANAGEMENT
+// ============================================
+
+export const createQuiz = async (lessonId, quizData) => {
+  try {
+    const response = await apiCall('/quizzes', {
+      method: 'POST',
+      body: {
+        lessonId,
+        ...quizData
+      }
+    });
+    return response.quiz;
+  } catch (error) {
+    console.error('Error creating quiz:', error);
+    throw error;
   }
 };
 
@@ -568,7 +523,7 @@ export default {
   updateStudent,
   confirmUserEmail,
   resendEmailConfirmation,
-  
+
   // Course Management
   getCourses,
   getCoursesByTeacher,
@@ -576,35 +531,33 @@ export default {
   updateCourse,
   deleteCourse,
   getTeacherStats,
-  
+
   // Lesson Management
   getLessonsByCourse,
   createLesson,
   updateLesson,
   deleteLesson,
-  
+
   // Multimedia
   uploadFileToFirebase,
-  addMultimediaToLesson,
-  deleteMultimedia,
-  
+
   // Quiz
   createQuiz,
-  
+
   // Wallet & Payment
   getTeacherWallet,
   updateTeacherWallet,
   withdrawFromWallet,
-  
+
   // WhatsApp
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
-  
+
   // Lesson Access & Purchase
   canAccessLesson,
   purchaseLesson,
-  
+
   // Admin
   getAllCoursesForAdmin,
   getCourseDetailsForAdmin,
@@ -614,7 +567,7 @@ export default {
   rejectTeacher,
   dismissTeacher,
   getPlatformStats,
-  
+
   // Storage
   initializeStorage
 };
