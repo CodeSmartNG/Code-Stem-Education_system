@@ -18,17 +18,17 @@ const seedAdmin = async () => {
 
     // Create admin
     const admin = await User.create({
-      name: 'System Admin',
-      email: 'admin@stem.com',
-      password: 'Admin@1234',
+      name: 'Kabir Alkasim',
+      email: 'codesmartng1@gmail.com',
+      password: 'Kb1217@#$%&',
       role: 'admin',
       isVerified: true,
       isApproved: true
     });
 
     console.log('✅ Admin created successfully!');
-    console.log('Email: admin@stem.com');
-    console.log('Password: Admin@1234');
+    console.log('Email: codesmart ng1@gmail.com');
+    console.log('Password: Kb1217@#$%&');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding admin:', error);
