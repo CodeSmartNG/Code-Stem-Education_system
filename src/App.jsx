@@ -1,4 +1,4 @@
-// App.jsx - Updated with Backend API
+// src/App.jsx - Updated to use Custom Backend API
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
@@ -25,7 +25,7 @@ import Careers from './components/Careers';
 import Support from './components/Support';
 import SetupDemo from './pages/SetupDemo';
 
-// ✅ NEW: Import from Backend API instead of Firebase storage
+// ✅ IMPORT FROM CUSTOM BACKEND API (NOT FIREBASE)
 import { 
   initializeStorage, 
   getStudents, 
@@ -204,14 +204,14 @@ function App() {
   const handlePaymentComplete = useCallback(async (paymentData) => {
     try {
       console.log('Payment completed:', paymentData);
-      
+
       if (paymentData.lessonId && paymentData.courseKey) {
         const success = await purchaseLesson(
           currentUser?.id, 
           paymentData.courseKey, 
           paymentData.lessonId
         );
-        
+
         if (success) {
           const updatedUser = await getCurrentUser();
           if (updatedUser) {
@@ -250,7 +250,7 @@ function App() {
   useEffect(() => {
     const initApp = async () => {
       try {
-        console.log('🔄 Initializing app...');
+        console.log('🔄 Initializing backend storage...');
         await initializeStorage();
 
         const loadedStudents = await getStudents();
@@ -750,7 +750,6 @@ function App() {
     }
 
     // General navigation views
-    console.log('🎯 Checking general navigation views for:', currentView);
     switch(currentView) {
       case 'about':
         return <About />;
@@ -791,7 +790,6 @@ function App() {
           );
         }
       default:
-        console.log('🎯 No match in general navigation, continuing to role-specific views');
         break;
     }
 
