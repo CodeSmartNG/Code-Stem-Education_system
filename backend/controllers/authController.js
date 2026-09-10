@@ -116,7 +116,7 @@ exports.register = async (req, res) => {
 };
 
 // ============================================
-// LOGIN CONTROLLER - ADD THIS
+// LOGIN CONTROLLER - WITH DEBUG LOGS
 // ============================================
 
 exports.login = async (req, res) => {
@@ -131,18 +131,37 @@ exports.login = async (req, res) => {
       });
     }
 
+    // ✅ DEBUG LOGS
+    console.log('\n🔍 ========== LOGIN ATTEMPT ==========');
+    console.log('📧 Email:', email);
+    console.log('🔑 Password received:', password);
+    console.log('🔑 Password length:', password.length);
+    console.log('🔑 Password type:', typeof password);
+
     // Find user with password
     const user = await User.findOne({ email }).select('+password');
-    
+
+    console.log('👤 User found:', !!user);
+
     if (!user) {
+      console.log('❌ No user found with this email');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
 
+    // ✅ DEBUG: Show stored hash
+    console.log('🔒 Stored hash:', user.password);
+    console.log('🔒 Hash starts with:', user.password?.substring(0, 7));
+    console.log('🔒 Hash length:', user.password?.length);
+
     // Check password
     const isMatch = await user.comparePassword(password);
+    
+    console.log('✅ Password match result:', isMatch);
+    console.log('=========================================\n');
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -150,63 +169,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check if email is verified (skip for admin)
-    if (!user.isVerified && user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Please verify your email before logging in. Check your inbox for the verification link.'
-      });
-    }
-
-    // Check if teacher is approved
-    if (user.role === 'teacher' && !user.isApproved) {
-      return res.status(403).json({
-        success: false,
-        message: 'Your teacher account is pending approval. Please wait for admin approval.'
-      });
-    }
-
-    // Generate token
-    const token = jwt.sign(
-      { 
-        id: user._id, 
-        role: user.role,
-        email: user.email 
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
-    );
-
-    // Remove password from response
-    const userResponse = user.toObject();
-    delete userResponse.password;
-    delete userResponse.verificationToken;
-    delete userResponse.__v;
-
-    res.status(200).json({
-      success: true,
-      token: token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified,
-        isApproved: user.isApproved || false,
-        profileImage: user.profileImage || null,
-        bio: user.bio || null,
-        createdAt: user.createdAt
-      }
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error during login'
-    });
-  }
-};
+    // ... rest of code stays same
 
 // ============================================
 // GET CURRENT USER CONTROLLER
