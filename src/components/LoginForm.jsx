@@ -1,3 +1,4 @@
+// src/components/LoginForm.jsx
 import React, { useState, useEffect } from 'react';
 import './AuthForms.css';
 
@@ -37,19 +38,16 @@ const LoginForm = ({
     setShowResendVerification(false);
     setResendMessage('');
 
-    // Check if account is locked
     if (isLocked) {
       setError('Account temporarily locked. Please wait 30 seconds before trying again.');
       return;
     }
 
-    // Validate fields
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
@@ -61,7 +59,6 @@ const LoginForm = ({
     try {
       const result = await onLogin(formData.email, formData.password);
 
-      // Check if login returned a special "email_not_verified" status
       if (result === 'email_not_verified') {
         setError('Please verify your email before logging in.');
         setShowResendVerification(true);
@@ -70,7 +67,6 @@ const LoginForm = ({
       }
 
       if (result === true || result === 'success') {
-        // Save email if "Remember Me" is checked
         if (rememberMe) {
           localStorage.setItem('remembered_email', formData.email);
         } else {
@@ -80,11 +76,9 @@ const LoginForm = ({
         setLoginAttempts(0);
         setShowResendVerification(false);
       } else {
-        // Increment failed attempts
         const newAttempts = loginAttempts + 1;
         setLoginAttempts(newAttempts);
 
-        // Lock account after 5 failed attempts
         if (newAttempts >= 5) {
           setIsLocked(true);
           setError('Too many failed attempts. Account locked for 30 seconds.');
@@ -98,19 +92,25 @@ const LoginForm = ({
         }
       }
     } catch (err) {
-      // Check if error is about email verification
-      if (err.message && err.message.toLowerCase().includes('verify your email')) {
-        setError('Please verify your email before logging in. Check your inbox for the confirmation link.');
+      console.error('Login error:', err);
+      
+      const errorMessage = err.message?.toLowerCase() || '';
+      
+      if (errorMessage.includes('failed to fetch') || errorMessage.includes('network')) {
+        setError('⚠️ Cannot connect to server. Please try again later.');
+      } else if (errorMessage.includes('verify your email')) {
+        setError('Please verify your email before logging in.');
         setShowResendVerification(true);
-      } else if (err.message && err.message.toLowerCase().includes('user not found')) {
+      } else if (errorMessage.includes('user not found')) {
         setError('No account found with this email. Please register first.');
-      } else if (err.message && err.message.toLowerCase().includes('invalid-credential')) {
+      } else if (errorMessage.includes('pending approval')) {
+        setError('Your teacher account is pending admin approval.');
+      } else if (errorMessage.includes('invalid') || errorMessage.includes('credentials')) {
         setError('Invalid email or password. Please check your credentials.');
       } else {
         setError(err.message || 'Login failed. Please try again.');
       }
 
-      // Increment failed attempts on error too
       const newAttempts = loginAttempts + 1;
       setLoginAttempts(newAttempts);
       if (newAttempts >= 5) {
@@ -173,21 +173,22 @@ const LoginForm = ({
     setResendMessage('');
   };
 
+  // ✅ UPDATED: Demo credentials with simpler password
   const fillDemoCredentials = (type) => {
     if (type === 'admin') {
       setFormData({
         email: 'codesmartng1@gmail.com',
-        password: 'Kb1217@#$%&'
+        password: 'Admin@1234'
       });
     } else if (type === 'teacher') {
       setFormData({
         email: 'kabiralkasim6@gmail.com',
-        password: 'Kb1217@#$%&'
+        password: 'Admin@1234'
       });
     } else if (type === 'student') {
       setFormData({
         email: 'kabiralkasim9@gmail.com',
-        password: 'Kb1217@#$%&'
+        password: 'Admin@1234'
       });
     }
     setError('');
@@ -195,13 +196,11 @@ const LoginForm = ({
     setResendMessage('');
   };
 
-  // Check if form is disabled
   const isDisabled = isLoading || parentLoading || isLocked;
 
   return (
     <div className="auth-container">
       <div className="auth-card">
-        {/* Header */}
         <div className="auth-header">
           <div className="auth-icon">🔐</div>
           <h2>Welcome Back</h2>
@@ -218,7 +217,6 @@ const LoginForm = ({
           )}
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className={`error-message ${isLocked ? 'lock-error' : ''}`}>
             <span className="error-icon">{isLocked ? '🔒' : '⚠️'}</span>
@@ -234,7 +232,6 @@ const LoginForm = ({
           </div>
         )}
 
-        {/* Resend Verification Section */}
         {showResendVerification && (
           <div className="resend-verification-section">
             <div className="resend-info">
@@ -257,7 +254,6 @@ const LoginForm = ({
           </div>
         )}
 
-        {/* Login Form */}
         <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
@@ -272,7 +268,6 @@ const LoginForm = ({
               disabled={isDisabled}
               className={`form-input ${error && !formData.email ? 'input-error' : ''}`}
               autoComplete="email"
-              aria-invalid={!!error && !formData.email}
             />
           </div>
 
@@ -290,14 +285,12 @@ const LoginForm = ({
                 disabled={isDisabled}
                 className={`form-input ${error && !formData.password ? 'input-error' : ''}`}
                 autoComplete="current-password"
-                aria-invalid={!!error && !formData.password}
               />
               <button
                 type="button"
                 className="password-toggle"
                 onClick={toggleShowPassword}
                 disabled={isDisabled}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? '🙈' : '👁️'}
               </button>
@@ -340,7 +333,7 @@ const LoginForm = ({
           </button>
         </form>
 
-        {/* Demo Credentials Section */}
+        {/* ✅ UPDATED: Demo credentials with simpler password */}
         <div className="demo-credentials">
           <button 
             className="demo-toggle"
@@ -349,32 +342,31 @@ const LoginForm = ({
           >
             {showDemoCredentials ? '🔽 Hide Demo Accounts' : '▶️ Quick Login with Demo Accounts'}
           </button>
-          
+
           {showDemoCredentials && (
             <div className="demo-grid">
               <div className="demo-card" onClick={() => fillDemoCredentials('admin')}>
                 <div className="demo-role">👑 Admin</div>
                 <div className="demo-email">codesmartng1@gmail.com</div>
-                <div className="demo-password">•••••••</div>
+                <div className="demo-password">Admin@1234</div>
                 <div className="demo-hint">Click to fill</div>
               </div>
               <div className="demo-card" onClick={() => fillDemoCredentials('teacher')}>
                 <div className="demo-role">👨‍🏫 Teacher</div>
                 <div className="demo-email">kabiralkasim6@gmail.com</div>
-                <div className="demo-password">••••••••</div>
+                <div className="demo-password">Admin@1234</div>
                 <div className="demo-hint">Click to fill</div>
               </div>
               <div className="demo-card" onClick={() => fillDemoCredentials('student')}>
                 <div className="demo-role">👨‍🎓 Student</div>
                 <div className="demo-email">kabiralkasim9@gmail.com</div>
-                <div className="demo-password">••••••••</div>
+                <div className="demo-password">Admin@1234</div>
                 <div className="demo-hint">Click to fill</div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
         <div className="auth-footer">
           <div className="footer-section">
             <p>Don't have an account?</p>
@@ -417,11 +409,11 @@ const LoginForm = ({
           </div>
         </div>
 
-        {/* Security Notice */}
+        {/* ✅ UPDATED: Changed from Firebase to Custom Backend */}
         <div className="security-notice">
           <span className="security-icon">🔒</span>
           <p>Your login is secure and encrypted</p>
-          <span className="powered-by">🔹 Powered by Firebase & Netlify</span>
+          <span className="powered-by">🔹 Powered by Custom Backend & Vercel</span>
         </div>
       </div>
     </div>
