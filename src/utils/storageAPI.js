@@ -1,6 +1,6 @@
 // src/utils/storageAPI.js
 
-import api, { apiCall } from './api'; // ← FIXED: import apiCall
+import { api } from './api';  // ✅ Correct - uses named export
 
 // ============================================
 // INITIALIZATION
