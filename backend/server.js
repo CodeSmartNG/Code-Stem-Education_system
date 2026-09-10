@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');  // ← ADD THIS
 
 // Load environment variables
 dotenv.config();
@@ -26,7 +27,7 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 // Connect to database
-connectDB();  // ← This will now work with your Atlas connection
+connectDB();
 
 // Middleware
 app.use(helmet());
@@ -83,4 +84,5 @@ app.listen(PORT, () => {
   console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
   console.log(`✅ CORS enabled for: http://localhost:5173`);
+  console.log(`✅ CORS enabled for: https://code-stem-education-system-one.vercel.app`);
 });
