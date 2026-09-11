@@ -1,6 +1,13 @@
+// src/components/StudentProfile.jsx
+
 import React, { useState, useEffect } from 'react';
 import './StudentProfile.css';
-import { getCurrentUser, updateUserData, getTeacherWhatsAppUrl, getTeacherWhatsAppNumber } from '../utils/storage';
+import { 
+  getCurrentUser, 
+  updateStudent,           // ← Changed from updateUserData
+  getTeacherWhatsAppUrl, 
+  getTeacherWhatsAppNumber 
+} from '../utils/storageAPI';   // ← Changed from '../utils/storage'
 
 const StudentProfile = ({ student, setStudent }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -32,15 +39,12 @@ const StudentProfile = ({ student, setStudent }) => {
     try {
       const currentUser = await getCurrentUser();
       if (currentUser) {
-        // Load enrolled courses
         if (currentUser.enrolledCourses) {
           setEnrolledCourses(currentUser.enrolledCourses);
         }
-        // Load completed lessons
         if (currentUser.completedLessons) {
           setCompletedLessons(currentUser.completedLessons);
         }
-        // Load teacher contacts for WhatsApp
         if (currentUser.teacherContacts) {
           const contacts = await Promise.all(
             currentUser.teacherContacts.map(async (teacherId) => {
@@ -73,8 +77,8 @@ const StudentProfile = ({ student, setStudent }) => {
         return;
       }
 
-      // Update user data in Firebase
       const updatedData = {
+        ...student,
         name: formData.name,
         email: formData.email,
         level: formData.level,
@@ -86,14 +90,14 @@ const StudentProfile = ({ student, setStudent }) => {
         updatedAt: new Date().toISOString()
       };
 
-      await updateUserData(currentUser.uid, updatedData);
-      
-      // Update local state
+      // ✅ Update via custom backend (uses `id`, not `uid`)
+      await updateStudent(updatedData);
+
       setStudent({
         ...student,
         ...updatedData
       });
-      
+
       setMessage('✅ Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
@@ -111,7 +115,6 @@ const StudentProfile = ({ student, setStudent }) => {
     });
   };
 
-  // Safety check for student
   if (!student) {
     return (
       <div className="student-profile">
@@ -187,7 +190,11 @@ const StudentProfile = ({ student, setStudent }) => {
                 <div className="info-item">
                   <span className="label">WhatsApp:</span>
                   <span className="value">
-                    <a href={`https://wa.me/${student.whatsappNumber}`} target="_blank" rel="noopener noreferrer">
+                    <a 
+                      href={`https://wa.me/${student.whatsappNumber}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
                       💬 {student.whatsappNumber}
                     </a>
                   </span>
@@ -248,7 +255,9 @@ const StudentProfile = ({ student, setStudent }) => {
                 Object.entries(progress).map(([course, value]) => (
                   <div key={course} className="progress-item">
                     <div className="progress-label">
-                      <span className="course-name">{course.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="course-name">
+                        {course.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
                       <span className="progress-percentage">{value || 0}%</span>
                     </div>
                     <div className="progress-bar">
@@ -272,7 +281,7 @@ const StudentProfile = ({ student, setStudent }) => {
       ) : (
         <form onSubmit={handleSubmit} className="profile-form">
           <h3>✏️ Edit Profile</h3>
-          
+
           <div className="form-grid">
             <div className="form-group">
               <label>Full Name *</label>
