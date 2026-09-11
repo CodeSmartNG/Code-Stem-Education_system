@@ -1,6 +1,36 @@
 // src/utils/storageAPI.js
 
-import { api } from './api';  // ✅ Correct - uses named export
+import { api } from './api';
+
+// Helper for direct API calls
+const apiCall = async (endpoint, options = {}) => {
+  const token = localStorage.getItem('token');
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...options.headers
+  };
+
+  const config = {
+    ...options,
+    headers
+  };
+
+  if (options.body instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, config);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'API request failed');
+  }
+
+  return data;
+};
 
 // ============================================
 // INITIALIZATION
@@ -58,7 +88,6 @@ export const authenticateUser = async (email, password) => {
 
 export const registerUser = async (userData) => {
   try {
-    // Transform data for backend
     const registerData = {
       fullName: userData.name,
       email: userData.email,
@@ -67,17 +96,16 @@ export const registerUser = async (userData) => {
     };
 
     const response = await api.register(registerData);
-    
+
     if (response.success) {
-      // Store token if returned
       if (response.token) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
       }
-      
-      return { 
-        user: response.user || userData, 
-        confirmationToken: response.verificationToken || 'email_verification_sent' 
+
+      return {
+        user: response.user || userData,
+        confirmationToken: response.verificationToken || 'email_verification_sent'
       };
     }
     throw new Error('Registration failed');
@@ -149,7 +177,7 @@ export const resendEmailConfirmation = async (email) => {
 export const getCourses = async () => {
   try {
     const response = await api.getCourses();
-    return response.courses || [];
+    return response.courses || response.data || [];
   } catch (error) {
     console.error('Error getting courses:', error);
     return [];
@@ -169,7 +197,7 @@ export const getCoursesByTeacher = async (teacherId) => {
 export const createCourse = async (courseData) => {
   try {
     const response = await api.createCourse(courseData);
-    return response.course;
+    return response.course || response.data;
   } catch (error) {
     console.error('Error creating course:', error);
     throw error;
@@ -179,7 +207,7 @@ export const createCourse = async (courseData) => {
 export const updateCourse = async (courseId, updateData) => {
   try {
     const response = await api.updateCourse(courseId, updateData);
-    return response.course;
+    return response.course || response.data;
   } catch (error) {
     console.error('Error updating course:', error);
     throw error;
@@ -199,7 +227,6 @@ export const deleteCourse = async (courseId) => {
 export const getTeacherStats = async (teacherId) => {
   try {
     const courses = await getCoursesByTeacher(teacherId);
-    const students = await getStudents();
 
     let totalStudents = 0;
     let totalLessons = 0;
@@ -231,10 +258,21 @@ export const getTeacherStats = async (teacherId) => {
 export const getLessonsByCourse = async (courseId) => {
   try {
     const response = await api.getLessons(courseId);
-    return response.lessons || [];
+    return response.lessons || response.data || [];
   } catch (error) {
     console.error('Error getting lessons:', error);
     return [];
+  }
+};
+
+// ✅ ADDED: Get single lesson by ID
+export const getLessonById = async (lessonId) => {
+  try {
+    const response = await apiCall(`/lessons/${lessonId}`);
+    return response.data || response.lesson || null;
+  } catch (error) {
+    console.error('Error getting lesson:', error);
+    return null;
   }
 };
 
@@ -244,7 +282,7 @@ export const createLesson = async (courseId, lessonData) => {
       ...lessonData,
       courseId
     });
-    return response.lesson;
+    return response.lesson || response.data;
   } catch (error) {
     console.error('Error creating lesson:', error);
     throw error;
@@ -254,7 +292,7 @@ export const createLesson = async (courseId, lessonData) => {
 export const updateLesson = async (lessonId, updateData) => {
   try {
     const response = await api.updateLesson(lessonId, updateData);
-    return response.lesson;
+    return response.lesson || response.data;
   } catch (error) {
     console.error('Error updating lesson:', error);
     throw error;
@@ -275,6 +313,44 @@ export const deleteLesson = async (lessonId) => {
 // MULTIMEDIA MANAGEMENT
 // ============================================
 
+// ✅ ADDED: Get multimedia by lesson
+export const getMultimediaByLesson = async (lessonId) => {
+  try {
+    const response = await apiCall(`/multimedia/lesson/${lessonId}`);
+    return response.data || response.multimedia || [];
+  } catch (error) {
+    console.error('Error getting multimedia:', error);
+    return [];
+  }
+};
+
+// ✅ ADDED: Add multimedia to a lesson
+export const addMultimedia = async (multimediaData) => {
+  try {
+    const response = await apiCall('/multimedia', {
+      method: 'POST',
+      body: JSON.stringify(multimediaData)
+    });
+    return response.data || response.multimedia;
+  } catch (error) {
+    console.error('Error adding multimedia:', error);
+    throw error;
+  }
+};
+
+// ✅ ADDED: Delete multimedia
+export const deleteMultimedia = async (multimediaId) => {
+  try {
+    await apiCall(`/multimedia/${multimediaId}`, {
+      method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error('Error deleting multimedia:', error);
+    throw error;
+  }
+};
+
 export const uploadFileToFirebase = async (file, path) => {
   try {
     const response = await api.uploadVideo(file);
@@ -291,10 +367,9 @@ export const uploadFileToFirebase = async (file, path) => {
 
 export const canAccessLesson = async (userId, courseKey, lessonId) => {
   try {
-    const response = await apiCall(`/lessons/${lessonId}/access`, {
-      method: 'GET',
-      params: { userId, courseKey }
-    });
+    const response = await apiCall(
+      `/lessons/${lessonId}/access?userId=${userId}&courseKey=${courseKey}`
+    );
     return response.hasAccess || false;
   } catch (error) {
     console.error('Error checking access:', error);
@@ -304,10 +379,10 @@ export const canAccessLesson = async (userId, courseKey, lessonId) => {
 
 export const purchaseLesson = async (userId, courseKey, lessonId) => {
   try {
-    const response = await api.purchaseLesson({ 
-      userId, 
-      courseKey, 
-      lessonId 
+    const response = await api.purchaseLesson({
+      userId,
+      courseKey,
+      lessonId
     });
     return response.success;
   } catch (error) {
@@ -351,7 +426,7 @@ export const updateTeacherProfileWithWhatsApp = async (teacherId, data) => {
 export const getAllCoursesForAdmin = async () => {
   try {
     const response = await api.getCourses();
-    return response.courses || [];
+    return response.courses || response.data || [];
   } catch (error) {
     console.error('Error getting all courses:', error);
     return [];
@@ -361,7 +436,7 @@ export const getAllCoursesForAdmin = async () => {
 export const getCourseDetailsForAdmin = async (courseId) => {
   try {
     const response = await api.getCourseById(courseId);
-    return response.course;
+    return response.course || response.data;
   } catch (error) {
     console.error('Error getting course details:', error);
     return null;
@@ -479,7 +554,7 @@ export const withdrawFromWallet = async (teacherId, amount, bankDetails) => {
   try {
     const response = await apiCall('/wallet/withdraw', {
       method: 'POST',
-      body: { teacherId, amount, bankDetails }
+      body: JSON.stringify({ teacherId, amount, bankDetails })
     });
     return response.data;
   } catch (error) {
@@ -496,12 +571,12 @@ export const createQuiz = async (lessonId, quizData) => {
   try {
     const response = await apiCall('/quizzes', {
       method: 'POST',
-      body: {
+      body: JSON.stringify({
         lessonId,
         ...quizData
-      }
+      })
     });
-    return response.quiz;
+    return response.quiz || response.data;
   } catch (error) {
     console.error('Error creating quiz:', error);
     throw error;
@@ -509,10 +584,13 @@ export const createQuiz = async (lessonId, quizData) => {
 };
 
 // ============================================
-// EXPORT ALL
+// DEFAULT EXPORT
 // ============================================
 
 export default {
+  // Initialization
+  initializeStorage,
+
   // User Management
   getCurrentUser,
   authenticateUser,
@@ -534,11 +612,15 @@ export default {
 
   // Lesson Management
   getLessonsByCourse,
+  getLessonById,
   createLesson,
   updateLesson,
   deleteLesson,
 
   // Multimedia
+  getMultimediaByLesson,
+  addMultimedia,
+  deleteMultimedia,
   uploadFileToFirebase,
 
   // Quiz
@@ -567,7 +649,4 @@ export default {
   rejectTeacher,
   dismissTeacher,
   getPlatformStats,
-
-  // Storage
-  initializeStorage
 };
