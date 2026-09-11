@@ -1,3 +1,5 @@
+// src/components/CourseCatalog.jsx
+
 import React, { useState, useEffect } from 'react';
 import { 
   getCourses, 
@@ -7,7 +9,7 @@ import {
   getTeacherWhatsAppUrl,
   getMultimediaByLesson,
   getLessonById
-} from '../utils/storage';
+} from '../utils/storageAPI';  // ✅ FIXED: was '../utils/storage'
 import Quiz from './Quiz';
 import MultimediaViewer from './MultimediaViewer';
 import PaymentModal from './payments/PaymentModal';
@@ -32,67 +34,58 @@ const CourseCatalog = ({ student, setStudent }) => {
     loadCourses();
   }, []);
 
+  // ✅ Load courses from storageAPI - handles arrays and objects
+  const loadCourses = async () => {
+    try {
+      setIsLoading(true);
 
+      // Get all courses from backend (returns an array)
+      const coursesData = await getCourses();
+      console.log('✅ Loaded courses:', coursesData);
+      console.log('📚 Number of courses:', coursesData?.length || 0);
 
-// ✅ Load courses from storage - FIXED (handles arrays)
-const loadCourses = async () => {
-  try {
-    setIsLoading(true);
+      // ✅ Filter only published courses for students
+      const publishedCourses = {};
 
-    // Get all courses from Firebase (returns an array)
-    const coursesData = await getCourses();
-    console.log('✅ Loaded courses:', coursesData);
-    console.log('📚 Number of courses:', coursesData?.length || 0);
+      if (Array.isArray(coursesData)) {
+        coursesData.forEach(course => {
+          if (course.isPublished !== false) {
+            const courseId = course.id || course._id;
+            publishedCourses[courseId] = { ...course, id: courseId };
+            console.log(`📢 Published course: ${course.title}`);
+          } else {
+            console.log(`📝 Draft course (hidden): ${course.title}`);
+          }
+        });
+      } else {
+        Object.entries(coursesData || {}).forEach(([key, course]) => {
+          if (course.isPublished !== false) {
+            publishedCourses[key] = course;
+          }
+        });
+      }
 
-    // ✅ Filter only published courses for students
-    const publishedCourses = {};
-    
-    // Check if coursesData is an array
-    if (Array.isArray(coursesData)) {
-      coursesData.forEach(course => {
-        // Show course if it's published (isPublished !== false)
-        if (course.isPublished !== false) {
-          publishedCourses[course.id] = course;
-          console.log(`📢 Published course: ${course.title}`);
-        } else {
-          console.log(`📝 Draft course (hidden): ${course.title}`);
-        }
-      });
-    } else {
-      // If it's an object (fallback)
-      Object.entries(coursesData || {}).forEach(([key, course]) => {
-        if (course.isPublished !== false) {
-          publishedCourses[key] = course;
-        }
-      });
+      console.log('✅ Published courses:', Object.keys(publishedCourses).length);
+      setCourses(publishedCourses);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error loading courses:', err);
+      setCourses({});
+      setError('Failed to load courses. Please refresh the page.');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    console.log('✅ Published courses:', Object.keys(publishedCourses).length);
-    setCourses(publishedCourses);
-    setError(null);
-  } catch (err) {
-    console.error('❌ Error loading courses:', err);
-    setCourses({});
-    setError('Failed to load courses. Please refresh the page.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-  
-  // ✅ Load multimedia for a specific lesson (Firebase)
+  // ✅ Load multimedia for a specific lesson from backend
   const loadLessonMultimedia = async (courseKey, lessonId) => {
     try {
       setIsLoading(true);
-      // Get multimedia from Firebase
       const multimedia = await getMultimediaByLesson(lessonId);
       setLessonMultimedia(multimedia || []);
-      
-      // Also get the lesson content
+
       const lesson = await getLessonById(lessonId);
       if (lesson) {
-        // Update the lesson in the selected course
         setCourses(prev => ({
           ...prev,
           [courseKey]: {
@@ -114,9 +107,7 @@ const loadCourses = async () => {
   // Safe Object.entries wrapper
   const safeObjectEntries = (obj) => {
     try {
-      if (!obj || typeof obj !== 'object') {
-        return [];
-      }
+      if (!obj || typeof obj !== 'object') return [];
       return Object.entries(obj);
     } catch (err) {
       console.error('Error in safeObjectEntries:', err);
@@ -127,9 +118,7 @@ const loadCourses = async () => {
   // Safe Object.keys wrapper
   const safeObjectKeys = (obj) => {
     try {
-      if (!obj || typeof obj !== 'object') {
-        return [];
-      }
+      if (!obj || typeof obj !== 'object') return [];
       return Object.keys(obj);
     } catch (err) {
       console.error('Error in safeObjectKeys:', err);
@@ -191,7 +180,6 @@ const loadCourses = async () => {
         if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
         updatedStudent.completedLessons.push(lessonId);
 
-        // Update course progress
         const totalLessons = courses[selectedCourse].lessons?.length || 0;
         const completedLessons = courses[selectedCourse].lessons?.filter(
           lesson => updatedStudent.completedLessons?.includes(`${selectedCourse}-${lesson.id}`)
@@ -245,12 +233,11 @@ const loadCourses = async () => {
       if (window.confirm(`Are you sure you want to purchase "${lesson.title}" for ₦${lesson.price}?`)) {
         const paymentResult = await purchaseLesson(currentUser.id, courseKey, lesson.id);
 
-        if (paymentResult?.success) {
+        if (paymentResult?.success || paymentResult === true) {
           alert('✅ Payment successful! You now have access to this lesson.');
           loadCourses();
           setSelectedCourse(courseKey);
           setCurrentLesson(lessonIndex);
-          // Load multimedia for the lesson
           await loadLessonMultimedia(courseKey, lesson.id);
         } else {
           alert('❌ Payment failed. Please try again.');
@@ -264,7 +251,7 @@ const loadCourses = async () => {
     }
   };
 
-  // Handle starting a lesson with new payment system
+  // Handle starting a lesson
   const handleStartLesson = async (courseKey, lessonIndex) => {
     try {
       if (!courses || !courses[courseKey]) return;
@@ -283,7 +270,6 @@ const loadCourses = async () => {
         return;
       }
 
-      // Check if lesson is paid and if student has access
       if (!lesson.isFree && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
         setSelectedLesson({ 
           courseKey, 
@@ -301,7 +287,6 @@ const loadCourses = async () => {
         return;
       }
 
-      // Check if lesson is locked (backward compatibility)
       if (lesson.isLocked && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
         setSelectedLesson({ 
           courseKey, 
@@ -322,10 +307,9 @@ const loadCourses = async () => {
       setSelectedCourse(courseKey);
       setCurrentLesson(lessonIndex);
       setShowQuiz(false);
-      
-      // ✅ Load multimedia for the lesson from Firebase
+
       await loadLessonMultimedia(courseKey, lesson.id);
-      
+
       window.scrollTo(0, 0);
     } catch (err) {
       console.error('Error starting lesson:', err);
@@ -340,26 +324,21 @@ const loadCourses = async () => {
       console.log('✅ Payment successful:', paymentData);
 
       if (selectedLesson) {
-        // Process teacher payment and payout
         const teacherPaymentSuccess = await processTeacherPayment(
           paymentData, 
           selectedLesson.lesson, 
           student
         );
 
-        // Reload courses to reflect the purchase
         loadCourses();
 
-        // Start the lesson
         setSelectedCourse(selectedLesson.courseKey);
         setCurrentLesson(selectedLesson.lessonIndex);
         setShowPaymentModal(false);
         setSelectedLesson(null);
 
-        // ✅ Load multimedia for the lesson
         await loadLessonMultimedia(selectedLesson.courseKey, selectedLesson.lesson.id);
 
-        // Show appropriate success message
         if (teacherPaymentSuccess) {
           alert('🎉 Payment successful! Lesson unlocked and teacher payment processed.');
         } else {
@@ -370,7 +349,6 @@ const loadCourses = async () => {
     } catch (error) {
       console.error('❌ Error processing teacher payment:', error);
 
-      // Still proceed with lesson access
       setSelectedCourse(selectedLesson?.courseKey);
       setCurrentLesson(selectedLesson?.lessonIndex);
       setShowPaymentModal(false);
@@ -392,7 +370,6 @@ const loadCourses = async () => {
         if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
         updatedStudent.completedLessons.push(lessonKey);
 
-        // Update course progress
         const totalLessons = courses[courseKey].lessons?.length || 0;
         const completedLessons = courses[courseKey].lessons?.filter(
           lesson => updatedStudent.completedLessons?.includes(`${courseKey}-${lesson.id}`)
@@ -419,7 +396,6 @@ const loadCourses = async () => {
     }
   };
 
-  // Get teacher WhatsApp URL
   const getTeacherContactUrl = (teacherId) => {
     return getTeacherWhatsAppUrl(teacherId);
   };
@@ -500,7 +476,6 @@ const loadCourses = async () => {
           </div>
         )}
 
-        {/* Access control for lesson content */}
         {!hasAccess && !lesson.isFree ? (
           <div className="payment-required">
             <div className="payment-prompt">
@@ -518,7 +493,6 @@ const loadCourses = async () => {
           </div>
         ) : (
           <>
-            {/* ✅ Display multimedia from Firebase */}
             {lessonMultimedia && lessonMultimedia.length > 0 && (
               <div className="multimedia-container">
                 <h3>📹 Lesson Materials</h3>
@@ -735,7 +709,6 @@ const loadCourses = async () => {
         })}
       </div>
 
-      {/* PaymentModal with safety checks */}
       <PaymentModal
         isOpen={showPaymentModal && selectedLesson?.lesson}
         onClose={() => {
