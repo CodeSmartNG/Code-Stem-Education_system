@@ -1,4 +1,4 @@
-// TeacherDashboard.js - Complete Updated Version with ALL Functions
+// src/component/TeacherDashboard.js - Custom Backend Version
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -10,7 +10,7 @@ import {
   deleteCourse,
   updateLesson,
   deleteLesson,
-  addMultimediaToLesson,
+  addMultimedia,
   deleteMultimedia,
   getLessonsByCourse,
   getTeacherWallet,
@@ -19,12 +19,25 @@ import {
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
-  uploadFileToFirebase,
-  uploadFileToFirebaseWithProgress,
-  deleteFileFromFirebase,
-  getFileUrlFromFirebase
-} from '../utils/storage';
-import paymentService from '../utils/paymentService';
+  uploadFileToFirebase
+} from '../utils/storageAPI';
+import './TeacherDashboard.css';
+
+// Simple payment service stub
+const paymentService = {
+  getUserTransactions: (userId) => {
+    try {
+      return JSON.parse(localStorage.getItem(`transactions_${userId}`) || '[]');
+    } catch {
+      return [];
+    }
+  },
+  addTransaction: (userId, transaction) => {
+    const txs = paymentService.getUserTransactions(userId);
+    txs.push(transaction);
+    localStorage.setItem(`transactions_${userId}`, JSON.stringify(txs));
+  }
+};
 import './TeacherDashboard.css';
 
 const TeacherDashboard = () => {
