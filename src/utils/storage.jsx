@@ -1,5 +1,7 @@
 // src/utils/storage.jsx
-
+// src/utils/storage.js
+// ⚠️ SHIM - Redirects all legacy Firebase imports to custom backend
+export * from './storageAPI';
 import { 
   auth, 
   db, 
