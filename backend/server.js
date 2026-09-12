@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const mongoose = require('mongoose');  // ← ADD THIS
+const mongoose = require('mongoose');
 
 // Load environment variables
 dotenv.config();
@@ -26,11 +26,16 @@ const errorHandler = require('./middleware/errorHandler');
 // Initialize express app
 const app = express();
 
-// Connect to database
-connectDB();
+// ✅ Connect to database (with proper handling)
+connectDB().catch(err => {
+  console.error('❌ Failed to connect to MongoDB:', err.message);
+});
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow uploads
+}));
+
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -42,12 +47,30 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ Root route (so Render health checks pass)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'STEM Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      courses: '/api/courses',
+      lessons: '/api/lessons',
+      users: '/api/users',
+      upload: '/api/upload'
+    }
+  });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -77,12 +100,15 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// Start server
+// ✅ Start server — MUST bind to 0.0.0.0 for Render
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('===========================================');
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ CORS enabled for: http://localhost:5173`);
   console.log(`✅ CORS enabled for: https://code-stem-education-system-one.vercel.app`);
+  console.log(`✅ MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Connecting...'}`);
+  console.log('===========================================');
 });
