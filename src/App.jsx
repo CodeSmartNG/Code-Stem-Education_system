@@ -23,7 +23,7 @@ import Blog from './components/Blog';
 import Resources from './components/Resources';
 import Careers from './components/Careers';
 import Support from './components/Support';
-import SetupDemo from './pages/SetupDemo';
+
 
 // ✅ IMPORT FROM CUSTOM BACKEND API (NOT FIREBASE)
 import { 
