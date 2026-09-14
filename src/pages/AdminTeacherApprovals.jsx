@@ -1,23 +1,45 @@
+// src/pages/RegisterTeacherPage.jsx
+
 import React from 'react';
 import TeacherRegisterForm from '../components/TeacherRegisterForm';
-import storage from '../utils/storage'; // path to your storage file
+import { registerUser } from '../utils/storageAPI';
 
 const RegisterTeacherPage = () => {
   const handleRegister = async (formData) => {
     try {
-      // Call registerTeacher from your local storage logic
-      const result = storage.registerTeacher(formData);
-      // Result contains: { user: newUser, confirmationToken }
-      // Show success to user
-      alert("Registration successful! Please check your email for confirmation. Your account will be reviewed by an admin before you can log in.");
+      const result = await registerUser({
+        name: formData.name || formData.fullName || 'Teacher',
+        email: formData.email,
+        password: formData.password,
+        role: 'teacher',
+        whatsappNumber: formData.whatsappNumber || ''
+      });
+
+      alert(
+        '✅ Registration successful! Please check your email for confirmation. ' +
+        'Your account will be reviewed by an admin before you can log in.'
+      );
       return true;
     } catch (err) {
-      alert(err.message);
+      console.error('Teacher registration error:', err);
+      alert(err.message || 'Registration failed. Please try again.');
       return false;
     }
   };
 
-  return <TeacherRegisterForm onRegister={handleRegister} onSwitchToLogin={() => {/* your logic */}} />;
+  const handleSwitchToLogin = () => {
+    // Add navigation logic here if using React Router:
+    // navigate('/login');
+    // Or use window.location:
+    window.location.href = '/';
+  };
+
+  return (
+    <TeacherRegisterForm
+      onRegister={handleRegister}
+      onSwitchToLogin={handleSwitchToLogin}
+    />
+  );
 };
 
 export default RegisterTeacherPage;
