@@ -658,7 +658,76 @@ export const updateProgress = async () => true;
 export const getQuizByLesson = async () => null;
 
 export const initializeDefaultCourses = async () => true;
+// ============================================
+// FINAL ALIASES — Cover all remaining legacy names
+// ============================================
 
+export const deleteUser = async (userId) => {
+  try {
+    await apiCall(`/users/${userId}`, { method: 'DELETE' });
+    return true;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+};
+
+export const updateUser = async (userId, userData) => {
+  try {
+    const response = await api.updateUser(userId, userData);
+    return response.user;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+};
+
+export const updateUserData = async (userId, userData) => {
+  try {
+    const response = await api.updateUser(userId, userData);
+    return response.user;
+  } catch (error) {
+    console.error('Error updating user data:', error);
+    throw error;
+  }
+};
+
+export const getUserData = async (userId) => {
+  try {
+    const response = await api.getUserById(userId);
+    return response.user || null;
+  } catch (error) {
+    console.error('Error getting user data:', error);
+    return null;
+  }
+};
+
+export const getCourseById = async (courseId) => {
+  try {
+    const response = await api.getCourseById(courseId);
+    return response.course || response.data;
+  } catch (error) {
+    console.error('Error getting course:', error);
+    return null;
+  }
+};
+
+export const saveTeacherBankAccount = async () => true;
+export const getTeacherBankAccount = async () => null;
+export const processPendingPayouts = async () => [];
+export const getTeacherEarnings = async () => ({
+  totalEarnings: 0,
+  pendingPayout: 0,
+  paidOut: 0,
+  transactions: []
+});
+export const getPlatformEarnings = async () => ({
+  totalEarnings: 0,
+  totalTransactions: 0,
+  transactions: []
+});
+export const getTeacherTransactions = async () => [];
+export const getAllTransactions = async () => [];
 // ============================================
 // DEFAULT EXPORT
 // ============================================
