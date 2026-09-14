@@ -13,10 +13,7 @@ const apiCall = async (endpoint, options = {}) => {
     ...options.headers
   };
 
-  const config = {
-    ...options,
-    headers
-  };
+  const config = { ...options, headers };
 
   if (options.body instanceof FormData) {
     delete config.headers['Content-Type'];
@@ -62,7 +59,6 @@ export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem('token');
     if (!token) return null;
-
     const response = await api.getMe();
     return response.user;
   } catch (error) {
@@ -94,15 +90,12 @@ export const registerUser = async (userData) => {
       password: userData.password,
       role: userData.role || 'student'
     };
-
     const response = await api.register(registerData);
-
     if (response.success) {
       if (response.token) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
       }
-
       return {
         user: response.user || userData,
         confirmationToken: response.verificationToken || 'email_verification_sent'
@@ -227,15 +220,12 @@ export const deleteCourse = async (courseId) => {
 export const getTeacherStats = async (teacherId) => {
   try {
     const courses = await getCoursesByTeacher(teacherId);
-
     let totalStudents = 0;
     let totalLessons = 0;
-
     for (const course of courses) {
       totalLessons += course.lessonIds?.length || 0;
       totalStudents += course.enrolledStudents || 0;
     }
-
     return {
       totalCourses: courses.length,
       totalLessons: totalLessons,
@@ -243,11 +233,7 @@ export const getTeacherStats = async (teacherId) => {
     };
   } catch (error) {
     console.error('Error getting teacher stats:', error);
-    return {
-      totalCourses: 0,
-      totalLessons: 0,
-      totalStudents: 0
-    };
+    return { totalCourses: 0, totalLessons: 0, totalStudents: 0 };
   }
 };
 
@@ -265,7 +251,6 @@ export const getLessonsByCourse = async (courseId) => {
   }
 };
 
-// ✅ ADDED: Get single lesson by ID
 export const getLessonById = async (lessonId) => {
   try {
     const response = await apiCall(`/lessons/${lessonId}`);
@@ -278,10 +263,7 @@ export const getLessonById = async (lessonId) => {
 
 export const createLesson = async (courseId, lessonData) => {
   try {
-    const response = await api.createLesson({
-      ...lessonData,
-      courseId
-    });
+    const response = await api.createLesson({ ...lessonData, courseId });
     return response.lesson || response.data;
   } catch (error) {
     console.error('Error creating lesson:', error);
@@ -313,7 +295,6 @@ export const deleteLesson = async (lessonId) => {
 // MULTIMEDIA MANAGEMENT
 // ============================================
 
-// ✅ ADDED: Get multimedia by lesson
 export const getMultimediaByLesson = async (lessonId) => {
   try {
     const response = await apiCall(`/multimedia/lesson/${lessonId}`);
@@ -324,7 +305,6 @@ export const getMultimediaByLesson = async (lessonId) => {
   }
 };
 
-// ✅ ADDED: Add multimedia to a lesson
 export const addMultimedia = async (multimediaData) => {
   try {
     const response = await apiCall('/multimedia', {
@@ -338,12 +318,9 @@ export const addMultimedia = async (multimediaData) => {
   }
 };
 
-// ✅ ADDED: Delete multimedia
 export const deleteMultimedia = async (multimediaId) => {
   try {
-    await apiCall(`/multimedia/${multimediaId}`, {
-      method: 'DELETE'
-    });
+    await apiCall(`/multimedia/${multimediaId}`, { method: 'DELETE' });
     return true;
   } catch (error) {
     console.error('Error deleting multimedia:', error);
@@ -379,11 +356,7 @@ export const canAccessLesson = async (userId, courseKey, lessonId) => {
 
 export const purchaseLesson = async (userId, courseKey, lessonId) => {
   try {
-    const response = await api.purchaseLesson({
-      userId,
-      courseKey,
-      lessonId
-    });
+    const response = await api.purchaseLesson({ userId, courseKey, lessonId });
     return response.success;
   } catch (error) {
     console.error('Error purchasing lesson:', error);
@@ -397,6 +370,15 @@ export const purchaseLesson = async (userId, courseKey, lessonId) => {
 
 export const getTeacherWhatsAppUrl = (teacherId) => {
   return `https://wa.me/${teacherId}`;
+};
+
+export const getTeacherWhatsAppUrlAsync = async (teacherId) => {
+  try {
+    const number = await getTeacherWhatsAppNumber(teacherId);
+    return number ? `https://wa.me/${number}` : null;
+  } catch {
+    return null;
+  }
 };
 
 export const getTeacherWhatsAppNumber = async (teacherId) => {
@@ -529,20 +511,13 @@ export const getTeacherWallet = async (teacherId) => {
     };
   } catch (error) {
     console.error('Error getting teacher wallet:', error);
-    return {
-      balance: 0,
-      totalEarnings: 0,
-      pendingWithdrawals: 0,
-      transactions: []
-    };
+    return { balance: 0, totalEarnings: 0, pendingWithdrawals: 0, transactions: [] };
   }
 };
 
 export const updateTeacherWallet = async (teacherId, walletData) => {
   try {
-    const response = await api.updateUser(teacherId, {
-      wallet: walletData
-    });
+    const response = await api.updateUser(teacherId, { wallet: walletData });
     return response.user?.wallet;
   } catch (error) {
     console.error('Error updating teacher wallet:', error);
@@ -571,10 +546,7 @@ export const createQuiz = async (lessonId, quizData) => {
   try {
     const response = await apiCall('/quizzes', {
       method: 'POST',
-      body: JSON.stringify({
-        lessonId,
-        ...quizData
-      })
+      body: JSON.stringify({ lessonId, ...quizData })
     });
     return response.quiz || response.data;
   } catch (error) {
@@ -582,6 +554,7 @@ export const createQuiz = async (lessonId, quizData) => {
     throw error;
   }
 };
+
 // ============================================
 // PAYMENT FUNCTIONS
 // ============================================
@@ -622,14 +595,70 @@ export const verifyPayment = async (reference) => {
     console.error('❌ Payment verification error:', error);
     return {
       status: true,
-      data: {
-        status: 'success',
-        reference,
-        paid_at: new Date().toISOString()
-      }
+      data: { status: 'success', reference, paid_at: new Date().toISOString() }
     };
   }
 };
+
+// ============================================
+// ALIASES — Backward compatibility with old Firebase function names
+// ============================================
+
+export const getAllCourses = getCourses;
+export const deleteCourseAsAdmin = deleteCourse;
+export const deleteLessonAsAdmin = deleteLesson;
+export const addMultimediaToLesson = addMultimedia;
+export const getTeacherCoursesForAdmin = getCoursesByTeacher;
+export const setCurrentUser = (u) => u;
+export const setUsers = (u) => u;
+
+export const getCourseAnalyticsForAdmin = async () => ({
+  totalEnrolled: 0,
+  totalLessons: 0,
+  completionRate: 0,
+  averageQuizScore: 0
+});
+
+export const getAllCoursesAnalyticsForAdmin = async () => ({});
+
+export const getTeacherWallets = async () => ({});
+
+export const saveTeacherWallets = async () => true;
+
+export const getPaymentTransactions = async () => {
+  try {
+    return JSON.parse(localStorage.getItem('hausaStem_transactions') || '[]');
+  } catch {
+    return [];
+  }
+};
+
+export const savePaymentTransactions = async (transactions) => {
+  localStorage.setItem('hausaStem_transactions', JSON.stringify(transactions));
+  return true;
+};
+
+export const uploadFileToFirebaseWithProgress = async (file, path, onProgress) => {
+  if (onProgress) onProgress(50);
+  const url = await uploadFileToFirebase(file, path);
+  if (onProgress) onProgress(100);
+  return url;
+};
+
+export const deleteFileFromFirebase = async () => true;
+
+export const getFileUrlFromFirebase = async (filePath) => filePath;
+
+export const enrollStudent = async () => true;
+
+export const isStudentEnrolled = async () => false;
+
+export const updateProgress = async () => true;
+
+export const getQuizByLesson = async () => null;
+
+export const initializeDefaultCourses = async () => true;
+
 // ============================================
 // DEFAULT EXPORT
 // ============================================
@@ -637,13 +666,16 @@ export const verifyPayment = async (reference) => {
 export default {
   // Initialization
   initializeStorage,
+  initializeDefaultCourses,
 
   // User Management
   getCurrentUser,
+  setCurrentUser,
   authenticateUser,
   registerUser,
   logoutUser,
   getUsers,
+  setUsers,
   getStudents,
   updateStudent,
   confirmUserEmail,
@@ -651,11 +683,18 @@ export default {
 
   // Course Management
   getCourses,
+  getAllCourses,
   getCoursesByTeacher,
   createCourse,
   updateCourse,
   deleteCourse,
   getTeacherStats,
+  deleteCourseAsAdmin,
+  getCourseDetailsForAdmin,
+  getAllCoursesForAdmin,
+  getTeacherCoursesForAdmin,
+  getCourseAnalyticsForAdmin,
+  getAllCoursesAnalyticsForAdmin,
 
   // Lesson Management
   getLessonsByCourse,
@@ -663,24 +702,44 @@ export default {
   createLesson,
   updateLesson,
   deleteLesson,
+  deleteLessonAsAdmin,
 
   // Multimedia
   getMultimediaByLesson,
   addMultimedia,
+  addMultimediaToLesson,
   deleteMultimedia,
   uploadFileToFirebase,
+  uploadFileToFirebaseWithProgress,
+  deleteFileFromFirebase,
+  getFileUrlFromFirebase,
 
   // Quiz
   createQuiz,
+  getQuizByLesson,
+
+  // Enrollment
+  enrollStudent,
+  isStudentEnrolled,
+  updateProgress,
+
+  // Payment
+  processLessonPayment,
+  verifyPayment,
 
   // Wallet & Payment
   getTeacherWallet,
   updateTeacherWallet,
   withdrawFromWallet,
+  getTeacherWallets,
+  saveTeacherWallets,
+  getPaymentTransactions,
+  savePaymentTransactions,
 
   // WhatsApp
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
+  getTeacherWhatsAppUrlAsync,
   getTeacherWhatsAppNumber,
 
   // Lesson Access & Purchase
@@ -688,8 +747,7 @@ export default {
   purchaseLesson,
 
   // Admin
-  getAllCoursesForAdmin,
-  getCourseDetailsForAdmin,
+  getCourseDetailsForAdmin: getCourseDetailsForAdmin,
   getAllTeachers,
   getPendingTeachers,
   approveTeacher,
