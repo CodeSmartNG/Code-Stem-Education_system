@@ -19,7 +19,7 @@ import {
   approveTeacher,
   rejectTeacher,
   dismissTeacher,
-} from '../utils/storage';
+} from '../utils/storageAPI';
 import paymentService from '../utils/paymentService';
 import './AdminDashboard.css';
 
