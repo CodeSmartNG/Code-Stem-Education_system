@@ -3,14 +3,13 @@ const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
 
 // ============================================
-// REGISTER CONTROLLER - FIXED
+// REGISTER CONTROLLER
 // ============================================
 
 exports.register = async (req, res) => {
   try {
     const { fullName, email, password, role } = req.body;
 
-    // Validate required fields
     if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -18,7 +17,6 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -27,77 +25,41 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Create user - FIXED: Use 'name' not 'fullName'
     const user = await User.create({
-      name: fullName,  // ← FIXED: Model uses 'name', not 'fullName'
+      name: fullName,
       email,
       password,
-      role: role || 'student',  // ← Default role
+      role: role || 'student',
       isVerified: false,
       isApproved: role === 'admin' ? true : false
     });
 
-    // Generate verification token
     const verificationToken = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // Store token in user document (optional)
     user.verificationToken = verificationToken;
     await user.save();
 
-    // Send verification email
     const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-    
-    await sendEmail({
-      to: email,
-      subject: 'Verify Your Email - STEM Platform',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
-            .content { padding: 30px; background: #f9fafb; }
-            .button { 
-              display: inline-block; 
-              padding: 12px 24px; 
-              background: #4F46E5; 
-              color: white !important; 
-              text-decoration: none; 
-              border-radius: 5px;
-              margin: 20px 0;
-            }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎓 STEM Platform</h1>
-            </div>
-            <div class="content">
-              <h2>Welcome, ${fullName}!</h2>
-              <p>Thank you for registering on our STEM Learning Platform.</p>
-              <p>Please click the button below to verify your email address:</p>
-              <div style="text-align: center;">
-                <a href="${verificationLink}" class="button">✅ Verify Email</a>
-              </div>
-              <p><strong>This link will expire in 24 hours.</strong></p>
-              <p>If you didn't create an account, please ignore this email.</p>
-            </div>
-            <div class="footer">
-              <p>&copy; 2026 STEM Platform. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
-    });
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Verify Your Email - STEM Platform',
+        html: `
+          <h1>Welcome, ${fullName}!</h1>
+          <p>Please click below to verify your email:</p>
+          <a href="${verificationLink}">Verify Email</a>
+          <p>This link expires in 24 hours.</p>
+        `
+      });
+    } catch (emailError) {
+      console.log('⚠️ Email failed to send:', emailError.message);
+      // Don't fail registration if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -116,7 +78,7 @@ exports.register = async (req, res) => {
 };
 
 // ============================================
-// LOGIN CONTROLLER - WITH DEBUG LOGS
+// LOGIN CONTROLLER — COMPLETE
 // ============================================
 
 exports.login = async (req, res) => {
@@ -131,12 +93,11 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ DEBUG LOGS
+    // DEBUG LOGS
     console.log('\n🔍 ========== LOGIN ATTEMPT ==========');
     console.log('📧 Email:', email);
-    console.log('🔑 Password received:', password);
-    console.log('🔑 Password length:', password.length);
-    console.log('🔑 Password type:', typeof password);
+    console.log('🔑 Password:', password);
+    console.log('🔑 Password length:', password?.length);
 
     // Find user with password
     const user = await User.findOne({ email }).select('+password');
@@ -151,16 +112,12 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ✅ DEBUG: Show stored hash
     console.log('🔒 Stored hash:', user.password);
-    console.log('🔒 Hash starts with:', user.password?.substring(0, 7));
     console.log('🔒 Hash length:', user.password?.length);
 
     // Check password
     const isMatch = await user.comparePassword(password);
-    
-    console.log('✅ Password match result:', isMatch);
-    console.log('=========================================\n');
+    console.log('✅ Password match:', isMatch);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -169,16 +126,67 @@ exports.login = async (req, res) => {
       });
     }
 
-    // ... rest of code stays same
+    // Check verification (skip for admin)
+    if (!user.isVerified && user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before logging in'
+      });
+    }
+
+    // Check teacher approval
+    if (user.role === 'teacher' && !user.isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your teacher account is pending approval'
+      });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
+
+    console.log('🎫 Token generated for:', user.email);
+    console.log('=========================================\n');
+
+    // Send response
+    res.status(200).json({
+      success: true,
+      token: token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        isApproved: user.isApproved || false,
+        profileImage: user.profileImage || null,
+        bio: user.bio || null,
+        whatsappNumber: user.whatsappNumber || '',
+        createdAt: user.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error during login'
+    });
+  }
+};
 
 // ============================================
-// GET CURRENT USER CONTROLLER
+// GET CURRENT USER
 // ============================================
 
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -206,16 +214,15 @@ exports.getMe = async (req, res) => {
 };
 
 // ============================================
-// VERIFY EMAIL CONTROLLER
+// VERIFY EMAIL
 // ============================================
 
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(404).json({
@@ -224,7 +231,6 @@ exports.verifyEmail = async (req, res) => {
       });
     }
 
-    // Check if already verified
     if (user.isVerified) {
       return res.status(400).json({
         success: false,
@@ -232,7 +238,6 @@ exports.verifyEmail = async (req, res) => {
       });
     }
 
-    // Mark as verified
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
@@ -244,18 +249,18 @@ exports.verifyEmail = async (req, res) => {
 
   } catch (error) {
     console.error('Verify email error:', error);
-    
+
     if (error.name === 'JsonWebTokenError') {
       return res.status(400).json({
         success: false,
         message: 'Invalid verification token'
       });
     }
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
         success: false,
-        message: 'Verification token has expired. Please request a new one.'
+        message: 'Verification token has expired'
       });
     }
 
@@ -267,7 +272,7 @@ exports.verifyEmail = async (req, res) => {
 };
 
 // ============================================
-// RESEND VERIFICATION EMAIL
+// RESEND VERIFICATION
 // ============================================
 
 exports.resendVerification = async (req, res) => {
@@ -296,7 +301,6 @@ exports.resendVerification = async (req, res) => {
       });
     }
 
-    // Generate new token
     const verificationToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
@@ -306,9 +310,8 @@ exports.resendVerification = async (req, res) => {
     user.verificationToken = verificationToken;
     await user.save();
 
-    // Send new verification email
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    
+
     await sendEmail({
       to: email,
       subject: 'Resend: Verify Your Email - STEM Platform',
