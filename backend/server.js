@@ -109,8 +109,16 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ CORS enabled for: http://localhost:5173`);
-  console.log(`✅ CORS enabled for: https://code-stem-education-system-one.vercel.app`);
+
+
+  console.log('✅ CORS enabled for:');
+console.log('   - http://localhost:5173');
+console.log('   - http://localhost:3000');
+console.log('   - http://127.0.0.1:5173');
+console.log('   - https://code-stem-education-system-i5dv.vercel.app');
+console.log('   - https://code-stem-education-system-one.vercel.app');
+
+
   console.log(`✅ MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Connecting...'}`);
   console.log('===========================================');
 });
