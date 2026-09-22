@@ -36,6 +36,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // Allow uploads
 }));
 
+
 app.use(cors({
   origin: [
     'http://localhost:5173',
