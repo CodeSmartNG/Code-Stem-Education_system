@@ -6,19 +6,36 @@ const sendEmail = require('../utils/sendEmail');
 // REGISTER CONTROLLER
 // ============================================
 
+
+
+
+
 exports.register = async (req, res) => {
   try {
-    const { fullName, email, password, role } = req.body;
+    // ✅ DEBUG — Show what arrived
+    console.log('\n========== REGISTER ATTEMPT ==========');
+    console.log('📥 Body received:', JSON.stringify(req.body, null, 2));
+    console.log('   fullName:', req.body?.fullName);
+    console.log('   name:', req.body?.name);
+    console.log('   email:', req.body?.email);
+    console.log('   password present:', !!req.body?.password);
+    console.log('   password length:', req.body?.password?.length);
+    console.log('======================================\n');
 
-    if (!fullName || !email || !password) {
+    const { fullName, name, email, password, role } = req.body;
+    const userName = fullName || name;   // ← accepts both
+
+    if (!userName || !email || !password) {
+      console.log('❌ Missing required fields');
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: fullName, email, password'
+        message: 'Please provide all required fields: name, email, password'
       });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ Email already exists:', email);
       return res.status(400).json({
         success: false,
         message: 'User already exists with this email'
@@ -26,13 +43,20 @@ exports.register = async (req, res) => {
     }
 
     const user = await User.create({
-      name: fullName,
+      name: userName,   // ← uses whichever was provided
       email,
       password,
       role: role || 'student',
       isVerified: false,
       isApproved: role === 'admin' ? true : false
     });
+
+    console.log('✅ User created:', user.email);
+
+
+
+
+
 
     const verificationToken = jwt.sign(
       { id: user._id, email: user.email },
