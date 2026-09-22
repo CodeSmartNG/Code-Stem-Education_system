@@ -77,27 +77,31 @@ exports.register = async (req, res) => {
   }
 };
 
+
 // ============================================
-// LOGIN CONTROLLER — COMPLETE
+// LOGIN CONTROLLER — WITH FULL DEBUG
 // ============================================
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('\n============================================');
+    console.log('🔍 LOGIN ATTEMPT');
+    console.log('============================================');
+    console.log('📧 Email received:', JSON.stringify(email));
+    console.log('📧 Email length:', email?.length);
+    console.log('🔑 Password received:', JSON.stringify(password));
+    console.log('🔑 Password length:', password?.length);
+
     // Validate input
     if (!email || !password) {
+      console.log('❌ Missing email or password');
       return res.status(400).json({
         success: false,
         message: 'Please provide email and password'
       });
     }
-
-    // DEBUG LOGS
-    console.log('\n🔍 ========== LOGIN ATTEMPT ==========');
-    console.log('📧 Email:', email);
-    console.log('🔑 Password:', password);
-    console.log('🔑 Password length:', password?.length);
 
     // Find user with password
     const user = await User.findOne({ email }).select('+password');
@@ -105,29 +109,37 @@ exports.login = async (req, res) => {
     console.log('👤 User found:', !!user);
 
     if (!user) {
-      console.log('❌ No user found with this email');
+      console.log('❌ No user found with email:', email);
+      console.log('============================================\n');
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       });
     }
 
+    console.log('👤 User name:', user.name);
+    console.log('👤 User role:', user.role);
+    console.log('👤 User verified:', user.isVerified);
     console.log('🔒 Stored hash:', user.password);
     console.log('🔒 Hash length:', user.password?.length);
+    console.log('🔒 Hash starts with:', user.password?.substring(0, 7));
 
     // Check password
     const isMatch = await user.comparePassword(password);
-    console.log('✅ Password match:', isMatch);
+    console.log('🔐 Password match result:', isMatch);
 
     if (!isMatch) {
+      console.log('❌ PASSWORD MISMATCH — check the hash');
+      console.log('============================================\n');
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       });
     }
 
     // Check verification (skip for admin)
     if (!user.isVerified && user.role !== 'admin') {
+      console.log('❌ User not verified');
       return res.status(403).json({
         success: false,
         message: 'Please verify your email before logging in'
@@ -136,6 +148,7 @@ exports.login = async (req, res) => {
 
     // Check teacher approval
     if (user.role === 'teacher' && !user.isApproved) {
+      console.log('❌ Teacher not approved');
       return res.status(403).json({
         success: false,
         message: 'Your teacher account is pending approval'
@@ -149,10 +162,9 @@ exports.login = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
-    console.log('🎫 Token generated for:', user.email);
-    console.log('=========================================\n');
+    console.log('✅ LOGIN SUCCESS for:', user.email);
+    console.log('============================================\n');
 
-    // Send response
     res.status(200).json({
       success: true,
       token: token,
@@ -172,12 +184,23 @@ exports.login = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Login error:', error);
+    console.log('============================================\n');
     res.status(500).json({
       success: false,
       message: error.message || 'Server error during login'
     });
   }
 };
+
+
+
+
+
+
+
+
+
+
 
 // ============================================
 // GET CURRENT USER
