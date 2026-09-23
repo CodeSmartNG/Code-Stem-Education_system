@@ -1,21 +1,24 @@
+// backend/utils/sendEmail.js
+const { Resend } = require('resend');
 
-const nodemailer = require('nodemailer');
+const sendEmail = async (options) => {
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-const sendEmail = async ({ to, subject, html }) => {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+    const result = await resend.emails.send({
+      from: 'STEM Platform <onboarding@resend.dev>',
+      to: options.to,
+      subject: options.subject,
+      html: options.html
+    });
 
-  await transporter.sendMail({
-    from: `"STEM Platform" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html
-  });
+    console.log('✅ Email sent:', result);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Email error:', error.message);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
