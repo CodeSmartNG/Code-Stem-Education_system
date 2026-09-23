@@ -108,90 +108,109 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // Clean input
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
 
     console.log('\n============================================');
     console.log('🔍 LOGIN ATTEMPT');
-    console.log('============================================');
-    console.log('📧 Email received:', JSON.stringify(email));
-    console.log('📧 Email length:', email?.length);
-    console.log('🔑 Password received:', JSON.stringify(password));
-    console.log('🔑 Password length:', password?.length);
+    console.log('📧 Email:', email);
+    console.log('📧 Email length:', email.length);
+    console.log('🔑 Password received:', password.length > 0);
+    console.log('🔑 Password length:', password.length);
 
     // Validate input
     if (!email || !password) {
       console.log('❌ Missing email or password');
+
       return res.status(400).json({
         success: false,
         message: 'Please provide email and password'
       });
     }
 
-    // Find user with password
+    // Find user and explicitly include password
     const user = await User.findOne({ email }).select('+password');
 
     console.log('👤 User found:', !!user);
 
     if (!user) {
-      console.log('❌ No user found with email:', email);
+      console.log('❌ No user found for:', email);
       console.log('============================================\n');
+
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
+    console.log('👤 User ID:', user._id);
     console.log('👤 User name:', user.name);
+    console.log('👤 User email:', user.email);
     console.log('👤 User role:', user.role);
-    console.log('👤 User verified:', user.isVerified);
-    console.log('🔒 Stored hash:', user.password);
+    console.log('👤 Verified:', user.isVerified);
+    console.log('👤 Approved:', user.isApproved);
+    console.log('🔒 Password exists:', !!user.password);
     console.log('🔒 Hash length:', user.password?.length);
-    console.log('🔒 Hash starts with:', user.password?.substring(0, 7));
+    console.log(
+      '🔒 Hash prefix:',
+      user.password ? user.password.substring(0, 7) : 'NO HASH'
+    );
 
     // Check password
     const isMatch = await user.comparePassword(password);
-    console.log('🔐 Password match result:', isMatch);
+
+    console.log('🔐 Password match:', isMatch);
 
     if (!isMatch) {
-      console.log('❌ PASSWORD MISMATCH — check the hash');
+      console.log('❌ PASSWORD MISMATCH');
       console.log('============================================\n');
+
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    // Check verification (skip for admin)
+    // Admin does not need email verification
     if (!user.isVerified && user.role !== 'admin') {
-      console.log('❌ User not verified');
+      console.log('❌ Email not verified');
+
       return res.status(403).json({
         success: false,
         message: 'Please verify your email before logging in'
       });
     }
 
-    // Check teacher approval
+    // Teacher approval
     if (user.role === 'teacher' && !user.isApproved) {
       console.log('❌ Teacher not approved');
+
       return res.status(403).json({
         success: false,
         message: 'Your teacher account is pending approval'
       });
     }
 
-    // Generate token
+    // Create JWT
     const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email
+      },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      {
+        expiresIn: process.env.JWT_EXPIRE || '7d'
+      }
     );
 
-    console.log('✅ LOGIN SUCCESS for:', user.email);
+    console.log('✅ LOGIN SUCCESS');
     console.log('============================================\n');
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      token: token,
+      token,
       user: {
         id: user._id,
         name: user.name,
@@ -208,13 +227,14 @@ exports.login = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Login error:', error);
-    console.log('============================================\n');
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: error.message || 'Server error during login'
     });
   }
 };
+
 
 
 
