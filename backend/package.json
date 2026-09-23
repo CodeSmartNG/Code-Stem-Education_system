@@ -35,7 +35,8 @@
     "nodemailer": "^6.9.0",
     "cloudinary": "^1.37.0",
     "express-rate-limit": "^6.7.0",
-    "compression": "^1.7.4"
+    "compression": "^1.7.4",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
