@@ -37,47 +37,48 @@ const apiCall = async (endpoint, options = {}) => {
 
   const fullUrl = `${API_URL}${endpoint}`;
 
-  try {
-    console.log(`📡 ${options.method || 'GET'} ${fullUrl}`);
+try {
+  console.log(`📡 ${options.method || 'GET'} ${fullUrl}`);
 
-    const response = await fetch(fullUrl);
+  // Send method, headers, body and authorization token
+  const response = await fetch(fullUrl, config);
 
-    // Get response safely
-    const data = await response.json();
+  // Get response safely
+  const data = await response.json();
 
-    if (!response.ok) {
-      console.error(`❌ API Error (${response.status}):`, data);
+  if (!response.ok) {
+    console.error(`❌ API Error (${response.status}):`, data);
 
-      throw new Error(
-        data.message ||
-        `API request failed with status ${response.status}`
-      );
-    }
+    throw new Error(
+      data.message ||
+      `API request failed with status ${response.status}`
+    );
+  }
 
-    console.log(
-      `✅ ${options.method || 'GET'} ${endpoint} success`
+  console.log(
+    `✅ ${options.method || 'GET'} ${endpoint} success`
+  );
+
+  return data;
+
+} catch (error) {
+
+  if (
+    error.message === 'Failed to fetch' ||
+    error.name === 'TypeError'
+  ) {
+    console.error(
+      `❌ Cannot connect to backend at ${API_URL}`
     );
 
-    return data;
-
-  } catch (error) {
-
-    if (
-      error.message === 'Failed to fetch' ||
-      error.name === 'TypeError'
-    ) {
-      console.error(
-        `❌ Cannot connect to backend at ${API_URL}`
-      );
-
-      throw new Error(
-        '⚠️ Cannot connect to server. Please check your internet connection or try again later.'
-      );
-    }
-
-    console.error('API Error:', error);
-    throw error;
+    throw new Error(
+      '⚠️ Cannot connect to server. Please check your internet connection or try again later.'
+    );
   }
+
+  console.error('API Error:', error);
+  throw error;
+}
 };
 
 export const api = {
