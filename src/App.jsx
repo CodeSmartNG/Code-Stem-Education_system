@@ -327,16 +327,37 @@ function App() {
   }, [currentUser, handleUserActivity, resetInactivityTimer]);
 
   // ============================================
-  // URL TOKEN CHECK
-  // ============================================
+// URL TOKEN CHECK — Handle /verify-email and ?token=
+// ============================================
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      handleEmailConfirmation(token);
-    }
-  }, [handleEmailConfirmation]);
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const path = window.location.pathname;
+
+  console.log('🔍 URL check — path:', path, '| token:', token ? 'present' : 'missing');
+
+  // Handle both /verify-email?token=xxx and /?token=xxx
+  if (token && (
+    path === '/verify-email' ||
+    path === '/verify-email/' ||
+    path === '/' ||
+    path === ''
+  )) {
+    console.log('📧 Email verification token detected, verifying...');
+
+    handleEmailConfirmation(token).then((success) => {
+      if (success) {
+        console.log('✅ Email verified successfully');
+        // Clean up the URL so it doesn't retry
+        window.history.replaceState({}, document.title, '/');
+        setCurrentView('login');
+      } else {
+        console.log('❌ Email verification failed');
+      }
+    });
+  }
+}, [handleEmailConfirmation]);
 
   // ============================================
   // LOGIN HANDLER
