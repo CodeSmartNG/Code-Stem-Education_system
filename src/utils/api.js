@@ -100,12 +100,23 @@ export const api = {
     }),
 
   getMe: () =>
-    apiCall('/auth/me'),
+  apiCall('/auth/me'),
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  },
+// ✅ Email verification
+confirmEmail: (token) =>
+  apiCall(`/auth/verify/${token}`),
+
+// ✅ Resend verification email
+resendConfirmation: (email) =>
+  apiCall('/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  }),
+
+logout: () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+},
 
   // ============================================
   // USERS
