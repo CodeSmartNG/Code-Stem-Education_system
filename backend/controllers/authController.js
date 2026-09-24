@@ -208,22 +208,26 @@ exports.login = async (req, res) => {
     console.log('✅ LOGIN SUCCESS');
     console.log('============================================\n');
 
-    return res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified,
-        isApproved: user.isApproved || false,
-        profileImage: user.profileImage || null,
-        bio: user.bio || null,
-        whatsappNumber: user.whatsappNumber || '',
-        createdAt: user.createdAt
-      }
-    });
+    // ✅ Send response — include id and uid
+const userId = user._id.toString();
+
+res.status(200).json({
+  success: true,
+  token: token,
+  user: {
+    id: userId,
+    uid: userId,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isVerified: user.isVerified,
+    isApproved: user.isApproved || false,
+    profileImage: user.profileImage || null,
+    bio: user.bio || null,
+    whatsappNumber: user.whatsappNumber || '',
+    createdAt: user.createdAt
+  }
+});
 
   } catch (error) {
     console.error('❌ Login error:', error);
