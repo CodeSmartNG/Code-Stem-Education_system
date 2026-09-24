@@ -376,7 +376,11 @@ useEffect(() => {
         console.log('User email:', user.email);
 
         const { password: _, ...userWithoutPassword } = user;
-        setCurrentUserState(userWithoutPassword);
+const userWithAlias = {
+  ...userWithoutPassword,
+  uid: userWithoutPassword.id
+};
+setCurrentUserState(userWithAlias);
 
         resetInactivityTimer();
 
