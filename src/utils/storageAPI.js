@@ -82,9 +82,20 @@ export const authenticateUser = async (email, password) => {
   try {
     const response = await api.login({ email, password });
     if (response.success) {
+      const user = response.user;
+      const userId = user.id || user._id;
+
+      // ✅ Ensure both id and uid are present
+      const userWithAlias = {
+        ...user,
+        id: userId,
+        uid: userId
+      };
+
       localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      return response.user;
+      localStorage.setItem('user', JSON.stringify(userWithAlias));
+
+      return userWithAlias;
     }
     return null;
   } catch (error) {
