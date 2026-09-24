@@ -145,10 +145,12 @@ export const updateStudent = async (student) => {
 
 export const confirmUserEmail = async (token) => {
   try {
+    console.log('📧 Confirming email...');
     const response = await api.confirmEmail(token);
-    return response.user;
+    console.log('✅ Confirm response:', response);
+    return response;   // ← Return full response, not response.user
   } catch (error) {
-    console.error('Error confirming email:', error);
+    console.error('❌ Error confirming email:', error);
     throw error;
   }
 };
