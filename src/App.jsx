@@ -247,58 +247,65 @@ function App() {
   // INITIALIZATION
   // ============================================
 
-  useEffect(() => {
-    const initApp = async () => {
-      try {
-        console.log('🔄 Initializing backend storage...');
-        await initializeStorage();
+  
 
-        const loadedStudents = await getStudents();
-        const loadedCurrentUser = await getCurrentUser();
+    useEffect(() => {
+  const initApp = async () => {
+    try {
+      console.log('🔄 Initializing backend storage...');
+      await initializeStorage();
 
-        console.log('Loaded students:', loadedStudents);
-        console.log('Loaded current user:', loadedCurrentUser);
-        console.log('Loaded current user role:', loadedCurrentUser?.role);
+      const loadedStudents = await getStudents();
+      const loadedCurrentUser = await getCurrentUser();
 
-        setStudentsState(loadedStudents || []);
+      console.log('Loaded students:', loadedStudents);
+      console.log('Loaded current user:', loadedCurrentUser);
+      console.log('Loaded current user role:', loadedCurrentUser?.role);
 
-        if (loadedCurrentUser) {
-          setCurrentUserState(loadedCurrentUser);
+      setStudentsState(loadedStudents || []);
 
-          const role = loadedCurrentUser.role;
-          console.log('🔍 User role detected:', role);
+      if (loadedCurrentUser) {
+        // ✅ Add uid alias for backward compatibility
+        const userWithAlias = {
+          ...loadedCurrentUser,
+          uid: loadedCurrentUser.id
+        };
+        setCurrentUserState(userWithAlias);
 
-          if (role === 'admin') {
-            console.log('👑 Setting admin view');
-            setCurrentView('admin');
-          } else if (role === 'teacher') {
-            console.log('👨‍🏫 Setting teacher view');
-            setCurrentView('teacher');
-          } else if (role === 'student') {
-            console.log('👨‍🎓 Setting student dashboard view');
-            setCurrentView('dashboard');
-          } else {
-            console.warn('⚠️ Unknown role:', role);
-            setCurrentView('dashboard');
-          }
+        const role = loadedCurrentUser.role;
+        console.log('🔍 User role detected:', role);
+
+        if (role === 'admin') {
+          console.log('👑 Setting admin view');
+          setCurrentView('admin');
+        } else if (role === 'teacher') {
+          console.log('👨‍🏫 Setting teacher view');
+          setCurrentView('teacher');
+        } else if (role === 'student') {
+          console.log('👨‍🎓 Setting student dashboard view');
+          setCurrentView('dashboard');
         } else {
-          console.log('👤 No current user, showing login');
-          setCurrentView('login');
+          console.warn('⚠️ Unknown role:', role);
+          setCurrentView('dashboard');
         }
-
-        debugAdminStatus();
-
-        setIsInitialized(true);
-        setInitError(null);
-      } catch (error) {
-        console.error('Error initializing app:', error);
-        setInitError(error.message || 'Failed to initialize app');
-        setIsInitialized(true);
+      } else {
+        console.log('👤 No current user, showing login');
+        setCurrentView('login');
       }
-    };
 
-    initApp();
-  }, []);
+      debugAdminStatus();
+
+      setIsInitialized(true);
+      setInitError(null);
+    } catch (error) {
+      console.error('Error initializing app:', error);
+      setInitError(error.message || 'Failed to initialize app');
+      setIsInitialized(true);
+    }
+  };
+
+  initApp();
+}, []);
 
   // ============================================
   // ACTIVITY LISTENERS
