@@ -59,8 +59,19 @@ export const getCurrentUser = async () => {
   try {
     const token = localStorage.getItem('token');
     if (!token) return null;
+
     const response = await api.getMe();
-    return response.user;
+    const user = response.user;
+
+    if (!user) return null;
+
+    // ✅ Ensure both id and uid are always present
+    const userId = user.id || user._id;
+    return {
+      ...user,
+      id: userId,
+      uid: userId
+    };
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
