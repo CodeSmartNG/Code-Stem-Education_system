@@ -22,12 +22,13 @@ const apiCall = async (endpoint, options = {}) => {
   };
 
   const config = {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers
-    }
-  };
+  ...options,
+  cache: 'no-store',   // ✅ Bypass browser cache
+  headers: {
+    ...defaultHeaders,
+    ...options.headers
+  }
+};
 
   // If FormData, remove Content-Type
   // Browser will automatically set multipart/form-data boundary
