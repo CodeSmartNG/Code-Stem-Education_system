@@ -36,7 +36,8 @@ router.get('/me', auth, getMe);
 // VERIFY EMAIL
 // GET /api/auth/verify-email/:token
 // ============================================
-router.get('/verify-email/:token', verifyEmail);
+
+router.get('/verify/:token', verifyEmail);
 
 // ============================================
 // RESEND VERIFICATION EMAIL
