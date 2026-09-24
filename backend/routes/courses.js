@@ -57,18 +57,32 @@ router.post('/', [
 });
 
 // ✅ Get all courses (published only for students)
+
 router.get('/', auth, async (req, res) => {
   try {
-    const query = { isPublished: true };
-    
-    // Teachers and admins see all courses
-    if (req.user.role === 'teacher' || req.user.role === 'admin') {
-      query.isPublished = { $ne: false };
+    let query = {};
+
+    if (req.user.role === 'student') {
+      // Students see only published courses
+      query.isPublished = true;
+    } else if (req.user.role === 'teacher') {
+      // Teachers see only their own courses (draft or published)
+      query.teacherId = req.user._id;
     }
+    // Admins see ALL courses
+
+    console.log('\n🔍 ===== GET /courses =====');
+    console.log('👤 Role:', req.user.role);
+    console.log('👤 User _id:', req.user._id);
+    console.log('📋 Query:', JSON.stringify(query));
 
     const courses = await Course.find(query)
       .populate('teacherId', 'name email whatsappNumber')
       .sort({ createdAt: -1 });
+
+    console.log('✅ Courses found:', courses.length);
+    console.log('📚 Titles:', courses.map(c => c.title));
+    console.log('=========================\n');
 
     res.json({
       success: true,
@@ -83,7 +97,6 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
-
 // ✅ Get course by ID
 router.get('/:id', auth, async (req, res) => {
   try {
