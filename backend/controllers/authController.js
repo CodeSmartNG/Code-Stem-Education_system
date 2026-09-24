@@ -252,7 +252,10 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
   try {
+    console.log('🔍 getMe — req.user.id:', req.user?.id);
+
     const user = await User.findById(req.user.id);
+    console.log('🔍 getMe — found user:', !!user, '| _id:', user?._id);
 
     if (!user) {
       return res.status(404).json({
@@ -266,9 +269,16 @@ exports.getMe = async (req, res) => {
     delete userResponse.verificationToken;
     delete userResponse.__v;
 
+    // ✅ Ensure both id and uid exist for compatibility
+    const userId = user._id.toString();
+
     res.status(200).json({
       success: true,
-      user: userResponse
+      user: {
+        ...userResponse,
+        id: userId,
+        uid: userId
+      }
     });
 
   } catch (error) {
