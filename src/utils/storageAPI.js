@@ -291,7 +291,20 @@ export const getLessonById = async (lessonId) => {
 export const createLesson = async (courseId, lessonData) => {
   try {
     const response = await api.createLesson({ ...lessonData, courseId });
-    return response.lesson || response.data;
+    console.log('📝 createLesson response:', response);
+
+    let lesson = response.lesson || response.data || response;
+
+    // ✅ Ensure id exists (MongoDB returns _id)
+    if (lesson && !lesson.id && lesson._id) {
+      lesson.id = lesson._id;
+    }
+
+    if (!lesson) {
+      throw new Error('Backend returned no lesson');
+    }
+
+    return lesson;
   } catch (error) {
     console.error('Error creating lesson:', error);
     throw error;
