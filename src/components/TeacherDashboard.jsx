@@ -298,38 +298,104 @@ setCoursesState(teacherCourses || []);
     }
   };
 
-  // ✅ Add Course
-  const handleAddCourse = async (e) => {
-    e.preventDefault();
-    try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        alert('Please log in first');
-        return;
-      }
+// ✅ Add Lesson
+const handleAddLesson = async (e) => {
+  e.preventDefault();
+  if (!selectedCourse) {
+    alert('Please select a course first');
+    return;
+  }
 
-      const courseData = {
-        ...newCourseForm,
-        teacherId: currentUser.uid,
-        teacherName: currentUser.name || 'Teacher',
-        enrolledStudents: 0,
-        isPublished: true
-      };
+  setIsUploading(true);
+  setUploadProgress(0);
 
-      await createCourse(courseData);
-      alert('✅ Course added successfully!');
-      setNewCourseForm({
-        title: '',
-        description: '',
-        thumbnail: '📚',
-        teacherId: ''
-      });
-      await loadData();
-      setActiveTab('my-courses');
-    } catch (error) {
-      alert('❌ Error adding course: ' + error.message);
+  try {
+    const progressInterval = simulateUploadProgress();
+
+    const lessonData = {
+      title: newLessonForm.title,
+      content: newLessonForm.content,
+      duration: newLessonForm.duration,
+      isFree: newLessonForm.isFree,
+      price: newLessonForm.isFree ? 0 : newLessonForm.price,
+      order: newLessonForm.order || courseLessons.length + 1
+    };
+
+    console.log('📝 Creating lesson with:', lessonData);
+
+    const lesson = await createLesson(selectedCourse, lessonData);
+    console.log('📝 Created lesson response:', lesson);
+
+    // ✅ Safe lesson ID
+    const lessonId = lesson?.id || lesson?._id;
+    if (!lessonId) {
+      throw new Error('Lesson created but no ID returned');
     }
-  };
+
+    // ✅ Get user safely
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.id || currentUser?.uid;
+    console.log('👤 User ID for upload:', userId);
+
+    if (newLessonForm.videoFile) {
+      if (!userId) {
+        console.warn('⚠️ No user ID for upload, skipping video');
+      } else {
+        const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
+        const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
+
+        const multimediaData = {
+          type: 'video',
+          url: downloadURL,
+          title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
+          description: newLessonForm.videoDescription || 'Video content for this lesson',
+          fileName: newLessonForm.videoFileName,
+          fileSize: newLessonForm.videoFile.size,
+          fileType: newLessonForm.videoFile.type,
+          firebasePath: filePath
+        };
+
+        await addMultimediaToLesson(lessonId, multimediaData);
+        console.log('✅ Video attached to lesson');
+      }
+    }
+
+    if (quizForm.questions.length > 0) {
+      const quizData = {
+        title: quizForm.title || 'Lesson Quiz',
+        passingScore: quizForm.passingScore,
+        questions: quizForm.questions
+      };
+      await createQuiz(lessonId, quizData);
+      console.log('✅ Quiz attached to lesson');
+    }
+
+    alert('✅ Lesson added successfully!');
+    clearInterval(progressInterval);
+    setUploadProgress(100);
+
+    setNewLessonForm({
+      title: '',
+      content: '',
+      duration: '',
+      isFree: true,
+      price: 0,
+      order: 0,
+      videoFile: null,
+      videoFileName: '',
+      videoTitle: '',
+      videoDescription: ''
+    });
+    resetQuizForm();
+
+    await loadCourseLessons(selectedCourse);
+    setIsUploading(false);
+  } catch (error) {
+    console.error('❌ Error adding lesson:', error);
+    alert('❌ Error adding lesson: ' + error.message);
+    setIsUploading(false);
+  }
+};
 
   // ✅ Delete Course
   const handleDeleteCourse = async (courseId) => {
