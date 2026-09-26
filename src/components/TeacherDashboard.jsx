@@ -230,8 +230,9 @@ const TeacherDashboard = () => {
       }
 
       const teacherCourses = await getCoursesByTeacher(currentUser.uid);
-      setCoursesState(teacherCourses);
-
+console.log('📚 Teacher courses loaded:', teacherCourses);
+console.log('📚 Number of courses:', teacherCourses?.length);
+setCoursesState(teacherCourses || []);
       let totalLessons = 0;
       let totalStudents = 0;
 
