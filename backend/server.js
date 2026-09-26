@@ -82,6 +82,8 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/multimedia', multimediaRoutes);
+app.use('/api/quizzes', quizRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
