@@ -19,6 +19,8 @@ const courseRoutes = require('./routes/courses');
 const lessonRoutes = require('./routes/lessons');
 const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
+const multimediaRoutes = require('./routes/multimedia');
+const quizRoutes = require('./routes/quizzes');
 
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
