@@ -203,8 +203,11 @@ export const getCourses = async () => {
 
 export const getCoursesByTeacher = async (teacherId) => {
   try {
+    // ✅ Backend already filters by logged-in teacher
+    // Just return all courses from the API
     const courses = await getCourses();
-    return courses.filter(c => c.teacherId === teacherId);
+    console.log('📚 getCoursesByTeacher — courses:', courses.length);
+    return courses;
   } catch (error) {
     console.error('Error getting teacher courses:', error);
     return [];
