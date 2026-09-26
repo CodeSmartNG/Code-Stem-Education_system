@@ -293,15 +293,28 @@ export const createLesson = async (courseId, lessonData) => {
     const response = await api.createLesson({ ...lessonData, courseId });
     console.log('📝 createLesson response:', response);
 
-    let lesson = response.lesson || response.data || response;
+    // ✅ Try every possible shape
+    let lesson = response.lesson 
+              || response.data 
+              || response.data?.lesson
+              || response.result
+              || response;
 
-    // ✅ Ensure id exists (MongoDB returns _id)
+    // ✅ Handle case where backend returns just { success, lessonId }
+    if (!lesson.id && !lesson._id && response.lessonId) {
+      lesson = { ...lesson, id: response.lessonId, _id: response.lessonId };
+    }
+
+    // ✅ Ensure id exists
     if (lesson && !lesson.id && lesson._id) {
       lesson.id = lesson._id;
     }
 
-    if (!lesson) {
-      throw new Error('Backend returned no lesson');
+    // ✅ Final check
+    const lessonId = lesson?.id || lesson?._id;
+    if (!lessonId) {
+      console.error('❌ Full response:', JSON.stringify(response));
+      throw new Error('Backend returned no lesson ID. Check Render logs.');
     }
 
     return lesson;
@@ -310,6 +323,7 @@ export const createLesson = async (courseId, lessonData) => {
     throw error;
   }
 };
+
 
 export const updateLesson = async (lessonId, updateData) => {
   try {
