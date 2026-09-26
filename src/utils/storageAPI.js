@@ -634,7 +634,12 @@ export const verifyPayment = async (reference) => {
 export const getAllCourses = getCourses;
 export const deleteCourseAsAdmin = deleteCourse;
 export const deleteLessonAsAdmin = deleteLesson;
-export const addMultimediaToLesson = addMultimedia;
+export const addMultimediaToLesson = async (lessonId, multimediaData) => {
+  return await addMultimedia({
+    ...multimediaData,
+    lessonId
+  });
+};
 export const getTeacherCoursesForAdmin = getCoursesByTeacher;
 export const setCurrentUser = (u) => u;
 export const setUsers = (u) => u;
