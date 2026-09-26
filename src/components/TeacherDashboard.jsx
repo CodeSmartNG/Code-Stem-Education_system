@@ -11,6 +11,7 @@ import {
   updateLesson,
   deleteLesson,
   addMultimedia,
+  addMultimediaToLesson,   // ← ADD THIS
   deleteMultimedia,
   getLessonsByCourse,
   getTeacherWallet,
@@ -19,7 +20,8 @@ import {
   updateTeacherProfileWithWhatsApp,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
-  uploadFileToFirebase
+  uploadFileToFirebase,
+  createQuiz               // ← ADD THIS
 } from '../utils/storageAPI';
 import './TeacherDashboard.css';
 
