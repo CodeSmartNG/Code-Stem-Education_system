@@ -94,6 +94,32 @@ app.get('/api/health', (req, res) => {
     mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
+// ✅ DEBUG: List all registered routes
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  const extractRoutes = (stack, basePath = '') => {
+    stack.forEach(middleware => {
+      if (middleware.route) {
+        const methods = Object.keys(middleware.route.methods).join(',').toUpperCase();
+        routes.push(`${methods} ${basePath}${middleware.route.path}`);
+      } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
+        const regexp = middleware.regexp.source
+          .replace('^\\/?(?=\\/|$)', '')
+          .replace(/\\\//g, '/')
+          .replace(/\\\?/g, '')
+          .replace(/\(\?:\(\[\^\\\/\]\+\?\)\)/g, ':param');
+        const newBase = basePath + regexp.replace(/\/\?$/, '').replace(/\$$/, '');
+        extractRoutes(middleware.handle.stack, newBase);
+      }
+    });
+  };
+  extractRoutes(app._router.stack);
+  res.json({ 
+    count: routes.length,
+    routes: routes.sort()
+  });
+});
+
 
 // 404 handler
 app.use((req, res) => {
