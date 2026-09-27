@@ -271,7 +271,14 @@ export const getTeacherStats = async (teacherId) => {
 export const getLessonsByCourse = async (courseId) => {
   try {
     const response = await api.getLessons(courseId);
-    return response.lessons || response.data || [];
+    const lessons = response.lessons || response.data || [];
+
+    // ✅ Ensure every lesson has both id and _id
+    return lessons.map(lesson => ({
+      ...lesson,
+      id: lesson.id || lesson._id,
+      _id: lesson._id || lesson.id
+    }));
   } catch (error) {
     console.error('Error getting lessons:', error);
     return [];
