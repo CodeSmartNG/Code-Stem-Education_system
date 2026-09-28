@@ -1235,9 +1235,6 @@ const handleAddLesson = async (e) => {
                     </button>
                   </div>
                 ) : (
-                  
-
-                      ) : (
         courseLessons.map(lesson => (
           <div key={lesson.id || lesson._id} className="lesson-teacher-card">
             <div className="lesson-info">
