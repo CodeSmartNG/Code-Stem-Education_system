@@ -77,8 +77,31 @@ router.get('/', auth, async (req, res) => {
     console.log('📋 Query:', JSON.stringify(query));
 
     const courses = await Course.find(query)
-      .populate('teacherId', 'name email whatsappNumber')
-      .sort({ createdAt: -1 });
+  .populate('teacherId', 'name email whatsappNumber')
+  .populate('lessonIds')
+  .sort({ createdAt: -1 });
+
+// ✅ Also normalize lessons inside each course
+const normalizedCourses = courses.map(course => {
+  const obj = course.toObject();
+  if (obj.lessonIds && Array.isArray(obj.lessonIds)) {
+    obj.lessons = obj.lessonIds.map(lesson => ({
+      ...lesson,
+      id: lesson._id ? lesson._id.toString() : lesson.id,
+      _id: lesson._id ? lesson._id.toString() : lesson._id
+    }));
+  }
+  // ✅ Add 'id' at top level
+  obj.id = obj._id.toString();
+  return obj;
+});
+
+res.json({
+  success: true,
+  count: normalizedCourses.length,
+  courses: normalizedCourses,
+  data: normalizedCourses
+});
 
     console.log('✅ Courses found:', courses.length);
     console.log('📚 Titles:', courses.map(c => c.title));
