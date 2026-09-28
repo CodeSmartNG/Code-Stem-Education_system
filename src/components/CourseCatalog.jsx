@@ -40,70 +40,71 @@ const CourseCatalog = ({ student, setStudent }) => {
       setIsLoading(true);
 
       // Get all courses from backend (returns an array)
-      const coursesData = await getCourses();
-console.log('✅ Loaded courses:', coursesData);
-console.log('📚 Number of courses:', coursesData?.length || 0);
-// ✅ Normalize: ensure each course has a 'lessons' array
-const normalizedCourses = (coursesData || []).map(course => {
-  const courseId = course.id || course._id;
-  
-  // Backend may return lessons in 'lessonIds' (populated) or 'lessons'
-  let lessons = course.lessons || course.lessonIds || [];
-  
-  // If lessons are IDs only (strings), we can't render them
-  if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
-    console.warn('⚠️ Lessons are IDs only — backend needs to populate them:', lessons);
-    lessons = [];
-  }
-  
-  // ✅ Normalize each lesson
-  lessons = lessons.map(lesson => ({
-    ...lesson,
-    id: lesson.id || lesson._id,
-    _id: lesson._id || lesson.id
-  }));
-  
-  return {
-    ...course,
-    id: courseId,
-    _id: course._id || courseId,
-    lessons
-  };
-});
-      
+      const loadCourses = async () => {
+  try {
+    setIsLoading(true);
 
-      // ✅ Filter only published courses for students
-      const publishedCourses = {};
+    // Get all courses from backend
+    const coursesData = await getCourses();
+    console.log('✅ Loaded courses:', coursesData);
+    console.log('📚 Number of courses:', coursesData?.length || 0);
 
-      if (Array.isArray(coursesData)) {
-        coursesData.forEach(course => {
-          if (course.isPublished !== false) {
-            const courseId = course.id || course._id;
-            publishedCourses[courseId] = { ...course, id: courseId };
-            console.log(`📢 Published course: ${course.title}`);
-          } else {
-            console.log(`📝 Draft course (hidden): ${course.title}`);
-          }
-        });
-      } else {
-        Object.entries(coursesData || {}).forEach(([key, course]) => {
-          if (course.isPublished !== false) {
-            publishedCourses[key] = course;
-          }
-        });
+    // ✅ Normalize every course
+    const normalizedCourses = (coursesData || []).map(course => {
+      const courseId = course.id || course._id;
+
+      // Backend may return lessons in 'lessons' or 'lessonIds'
+      let lessons = course.lessons || course.lessonIds || [];
+
+      // If lessons are just IDs (strings), skip rendering
+      if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
+        console.warn('⚠️ Lessons are IDs only — backend needs to populate:', lessons);
+        lessons = [];
       }
 
-      console.log('✅ Published courses:', Object.keys(publishedCourses).length);
-      setCourses(publishedCourses);
-      setError(null);
-    } catch (err) {
-      console.error('❌ Error loading courses:', err);
-      setCourses({});
-      setError('Failed to load courses. Please refresh the page.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // Normalize each lesson
+      lessons = lessons.map(lesson => ({
+        ...lesson,
+        id: lesson.id || lesson._id,
+        _id: lesson._id || lesson.id
+      }));
+
+      return {
+        ...course,
+        id: courseId,
+        _id: course._id || courseId,
+        lessons
+      };
+    });
+
+    console.log('✅ Normalized courses:', normalizedCourses);
+
+    // ✅ Filter published courses — USE normalizedCourses, NOT coursesData
+    const publishedCourses = {};
+    normalizedCourses.forEach(course => {
+      if (course.isPublished !== false) {
+        publishedCourses[course.id] = course;
+        console.log(`📢 Published: ${course.title} — ${course.lessons?.length || 0} lessons`);
+      } else {
+        console.log(`📝 Draft (hidden): ${course.title}`);
+      }
+    });
+
+    console.log('✅ Published courses:', Object.keys(publishedCourses).length);
+    setCourses(publishedCourses);
+    setError(null);
+  } catch (err) {
+    console.error('❌ Error loading courses:', err);
+    setCourses({});
+    setError('Failed to load courses. Please refresh the page.');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
+      
 
   // ✅ Load multimedia for a specific lesson from backend
   const loadLessonMultimedia = async (courseKey, lessonId) => {
