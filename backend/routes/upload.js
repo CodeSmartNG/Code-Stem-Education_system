@@ -1,5 +1,4 @@
 // routes/upload.js
-
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { uploadVideo, uploadMedia } = require('../middleware/upload');
@@ -16,10 +15,16 @@ router.post('/video', auth, uploadVideo.single('video'), async (req, res) => {
       });
     }
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/videos/${req.file.filename}`;
+    // ✅ Force HTTPS — required for Vercel (mixed content blocking)
+    const baseUrl = process.env.BACKEND_URL || `https://${req.get('host')}`;
+    const fileUrl = `${baseUrl}/uploads/videos/${req.file.filename}`;
+
+    console.log('✅ Video uploaded:', fileUrl);
 
     res.json({
       success: true,
+      url: fileUrl,                    // ✅ Also top-level
+      fileUrl: fileUrl,                // ✅ Backup key
       data: {
         url: fileUrl,
         fileName: req.file.filename,
@@ -47,10 +52,15 @@ router.post('/multimedia', auth, uploadMedia.single('file'), async (req, res) =>
       });
     }
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/media/${req.file.filename}`;
+    const baseUrl = process.env.BACKEND_URL || `https://${req.get('host')}`;
+    const fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+
+    console.log('✅ Media uploaded:', fileUrl);
 
     res.json({
       success: true,
+      url: fileUrl,
+      fileUrl: fileUrl,
       data: {
         url: fileUrl,
         fileName: req.file.filename,
