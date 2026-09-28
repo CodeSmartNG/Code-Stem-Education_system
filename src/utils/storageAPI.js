@@ -389,15 +389,32 @@ export const deleteMultimedia = async (multimediaId) => {
   }
 };
 
-export const uploadFileToFirebase = async (file, path) => {
+// ✅ Upload file to our custom backend
+export const uploadFile = async (file, path) => {
   try {
+    console.log('📤 Uploading:', file?.name, 'size:', file?.size);
+
     const response = await api.uploadVideo(file);
-    return response.url;
+    console.log('📤 Upload response:', response);
+
+    // ✅ Handle multiple response shapes
+    const url = response?.url || response?.data?.url || response?.fileUrl;
+
+    if (!url) {
+      console.error('❌ No URL in response:', response);
+      throw new Error('Upload succeeded but no URL returned');
+    }
+
+    console.log('✅ Upload URL:', url);
+    return url;
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('❌ Upload error:', error);
     throw error;
   }
 };
+
+// ✅ Keep old name for backward compatibility
+export const uploadFileToFirebase = uploadFile;
 
 // ============================================
 // LESSON ACCESS & PURCHASE
