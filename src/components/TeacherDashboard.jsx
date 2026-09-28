@@ -567,7 +567,7 @@ const handleAddLesson = async (e) => {
       if (newMultimediaForm.file) {
         const currentUser = await getCurrentUser();
         const filePath = `teachers/${currentUser.uid}/media/${Date.now()}_${newMultimediaForm.fileName}`;
-        const fileUrl = await uploadFileToFirebase(newMultimediaForm.file, filePath);
+        const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
 
         multimediaData.url = fileUrl;
         multimediaData.fileName = newMultimediaForm.fileName;
