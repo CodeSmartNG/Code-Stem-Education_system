@@ -11,6 +11,7 @@ const { auth, isTeacher } = require('../middleware/auth');
 // GET all lessons (optionally by course)
 // GET /api/lessons?courseId=xxx
 // ============================================
+
 router.get('/', auth, async (req, res) => {
   try {
     const { courseId } = req.query;
@@ -18,11 +19,19 @@ router.get('/', auth, async (req, res) => {
 
     const lessons = await Lesson.find(query).sort({ order: 1 });
 
+    // ✅ Normalize every lesson to have 'id'
+    const normalizedLessons = lessons.map(lesson => {
+      const obj = lesson.toObject();
+      obj.id = obj._id.toString();
+      obj._id = obj._id.toString();
+      return obj;
+    });
+
     res.json({
       success: true,
-      count: lessons.length,
-      lessons: lessons,
-      data: lessons
+      count: normalizedLessons.length,
+      lessons: normalizedLessons,
+      data: normalizedLessons
     });
   } catch (error) {
     console.error('Get lessons error:', error);
@@ -32,7 +41,6 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
-
 // ============================================
 // GET single lesson by ID
 // GET /api/lessons/:id
