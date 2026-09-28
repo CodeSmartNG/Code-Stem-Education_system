@@ -35,9 +35,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   }, []);
 
   // ✅ Load courses from storageAPI - handles arrays and objects
-  const loadCourses = async () => {
-    try {
-      setIsLoading(true);
+  
 
       // Get all courses from backend (returns an array)
       const loadCourses = async () => {
