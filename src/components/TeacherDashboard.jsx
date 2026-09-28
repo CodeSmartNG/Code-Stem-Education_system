@@ -21,6 +21,7 @@ import {
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppNumber,
   uploadFileToFirebase,
+  uploadFile,
   createQuiz               // ← ADD THIS
 } from '../utils/storageAPI';
 import './TeacherDashboard.css';
