@@ -1235,43 +1235,47 @@ const handleAddLesson = async (e) => {
                       ➕ Add Your First Lesson
                     </button>
                   </div>
-                ) : (
-        courseLessons.map(lesson => (
-          <div key={lesson.id || lesson._id} className="lesson-teacher-card">
-            <div className="lesson-info">
-              <h5>📝 {lesson.title}</h5>
-              <p><strong>Duration:</strong> ⏱️ {lesson.duration}</p>
-              <p><strong>Type:</strong> 
-                <span className={`lesson-type ${lesson.isFree ? 'free' : 'paid'}`}>
-                  {lesson.isFree ? ' 🆓 FREE' : ` 💰 PAID - ${formatCurrency(lesson.price)}`}
-                </span>
-              </p>
+                
+        ) : (
+          courseLessons.map(lesson => (
+            <div key={lesson.id || lesson._id} className="lesson-teacher-card">
+              <div className="lesson-info">
+                <h5>📝 {lesson.title}</h5>
+                <p><strong>Duration:</strong> ⏱️ {lesson.duration}</p>
+                <p><strong>Type:</strong> 
+                  <span className={`lesson-type ${lesson.isFree ? 'free' : 'paid'}`}>
+                    {lesson.isFree ? ' 🆓 FREE' : ` 💰 PAID - ${formatCurrency(lesson.price)}`}
+                  </span>
+                </p>
+              </div>
+              <div className="lesson-actions">
+                <button className="edit-btn" onClick={() => {
+                  setEditingLesson({ lessonId: lesson.id || lesson._id });
+                  setEditLessonForm({
+                    title: lesson.title || '',
+                    content: lesson.content || '',
+                    duration: lesson.duration || '',
+                    isFree: lesson.isFree !== undefined ? lesson.isFree : true,
+                    price: lesson.price || 0
+                  });
+                }}>
+                  ✏️ Edit
+                </button>
+                <button className="delete-btn" onClick={() => handleDeleteLesson(lesson.id || lesson._id, lesson.title)}>
+                  🗑️ Delete
+                </button>
+              </div>
             </div>
-            <div className="lesson-actions">
-              <button className="edit-btn" onClick={() => {
-                setEditingLesson({ lessonId: lesson.id || lesson._id });
-                setEditLessonForm({
-                  title: lesson.title || '',
-                  content: lesson.content || '',
-                  duration: lesson.duration || '',
-                  isFree: lesson.isFree !== undefined ? lesson.isFree : true,
-                  price: lesson.price || 0
-                });
-              }}>
-                ✏️ Edit
-              </button>
-              <button className="delete-btn" onClick={() => handleDeleteLesson(lesson.id || lesson._id, lesson.title)}>
-                🗑️ Delete
-              </button>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  )}
+          ))
+        )}
+      </div>
+    )}
   </div>
 )}
 
+{/* ============================================
+    MANAGE MULTIMEDIA TAB
+    ============================================ */}
 {/* ============================================
     MANAGE MULTIMEDIA TAB
     ============================================ */}
