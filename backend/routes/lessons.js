@@ -20,6 +20,7 @@ const normalizeLesson = (lesson) => {
   };
 };
 
+
 // ============================================
 // GET all lessons (optionally by course)
 // GET /api/lessons?courseId=xxx
