@@ -41,8 +41,36 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       // Get all courses from backend (returns an array)
       const coursesData = await getCourses();
-      console.log('✅ Loaded courses:', coursesData);
-      console.log('📚 Number of courses:', coursesData?.length || 0);
+console.log('✅ Loaded courses:', coursesData);
+console.log('📚 Number of courses:', coursesData?.length || 0);
+// ✅ Normalize: ensure each course has a 'lessons' array
+const normalizedCourses = (coursesData || []).map(course => {
+  const courseId = course.id || course._id;
+  
+  // Backend may return lessons in 'lessonIds' (populated) or 'lessons'
+  let lessons = course.lessons || course.lessonIds || [];
+  
+  // If lessons are IDs only (strings), we can't render them
+  if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
+    console.warn('⚠️ Lessons are IDs only — backend needs to populate them:', lessons);
+    lessons = [];
+  }
+  
+  // ✅ Normalize each lesson
+  lessons = lessons.map(lesson => ({
+    ...lesson,
+    id: lesson.id || lesson._id,
+    _id: lesson._id || lesson.id
+  }));
+  
+  return {
+    ...course,
+    id: courseId,
+    _id: course._id || courseId,
+    lessons
+  };
+});
+      
 
       // ✅ Filter only published courses for students
       const publishedCourses = {};
