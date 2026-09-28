@@ -194,7 +194,14 @@ export const resendEmailConfirmation = async (email) => {
 export const getCourses = async () => {
   try {
     const response = await api.getCourses();
-    return response.courses || response.data || [];
+    const courses = response.courses || response.data || [];
+
+    // ✅ Ensure every course has 'id'
+    return courses.map(course => ({
+      ...course,
+      id: course.id || course._id,
+      _id: course._id || course.id
+    }));
   } catch (error) {
     console.error('Error getting courses:', error);
     return [];
