@@ -8,10 +8,22 @@ const Course = require('../models/Course');
 const { auth, isTeacher } = require('../middleware/auth');
 
 // ============================================
+// HELPER — normalize lesson objects
+// ============================================
+const normalizeLesson = (lesson) => {
+  const obj = lesson.toObject ? lesson.toObject() : lesson;
+  const id = obj._id ? obj._id.toString() : obj.id;
+  return {
+    ...obj,
+    id: id,
+    _id: id
+  };
+};
+
+// ============================================
 // GET all lessons (optionally by course)
 // GET /api/lessons?courseId=xxx
 // ============================================
-
 router.get('/', auth, async (req, res) => {
   try {
     const { courseId } = req.query;
@@ -20,12 +32,7 @@ router.get('/', auth, async (req, res) => {
     const lessons = await Lesson.find(query).sort({ order: 1 });
 
     // ✅ Normalize every lesson to have 'id'
-    const normalizedLessons = lessons.map(lesson => {
-      const obj = lesson.toObject();
-      obj.id = obj._id.toString();
-      obj._id = obj._id.toString();
-      return obj;
-    });
+    const normalizedLessons = lessons.map(normalizeLesson);
 
     res.json({
       success: true,
@@ -41,6 +48,7 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
+
 // ============================================
 // GET single lesson by ID
 // GET /api/lessons/:id
@@ -56,10 +64,13 @@ router.get('/:id', auth, async (req, res) => {
       });
     }
 
+    // ✅ Normalize
+    const normalized = normalizeLesson(lesson);
+
     res.json({
       success: true,
-      lesson: lesson,
-      data: lesson
+      lesson: normalized,
+      data: normalized
     });
   } catch (error) {
     console.error('Get lesson error:', error);
@@ -82,7 +93,6 @@ router.post('/', [auth, isTeacher], async (req, res) => {
     console.log('👤 Teacher:', req.user?._id);
     console.log('📥 Body:', req.body);
 
-    // ✅ Validate
     if (!title || !courseId) {
       return res.status(400).json({
         success: false,
@@ -90,7 +100,6 @@ router.post('/', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Check course exists
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
@@ -99,7 +108,6 @@ router.post('/', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Create lesson
     const lesson = await Lesson.create({
       title,
       content: content || '',
@@ -113,18 +121,19 @@ router.post('/', [auth, isTeacher], async (req, res) => {
 
     console.log('✅ Lesson created:', lesson._id);
 
-    // ✅ Add lesson to course
     await Course.findByIdAndUpdate(courseId, {
       $push: { lessonIds: lesson._id }
     });
 
-    // ✅ Return with all possible keys
+    // ✅ Normalize the response
+    const normalized = normalizeLesson(lesson);
+
     res.status(201).json({
       success: true,
       message: 'Lesson created successfully',
-      lesson: lesson,
-      data: lesson,
-      lessonId: lesson._id
+      lesson: normalized,
+      data: normalized,
+      lessonId: normalized.id
     });
 
   } catch (error) {
@@ -155,10 +164,13 @@ router.put('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
+    // ✅ Normalize
+    const normalized = normalizeLesson(lesson);
+
     res.json({
       success: true,
-      lesson: lesson,
-      data: lesson
+      lesson: normalized,
+      data: normalized
     });
   } catch (error) {
     console.error('Update lesson error:', error);
@@ -175,6 +187,23 @@ router.put('/:id', [auth, isTeacher], async (req, res) => {
 // ============================================
 router.delete('/:id', [auth, isTeacher], async (req, res) => {
   try {
+    console.log('🗑️ Delete lesson request:', req.params.id);
+
+    // ✅ Validate ObjectId
+    if (!req.params.id || req.params.id === 'undefined') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lesson ID'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lesson ID format'
+      });
+    }
+
     const lesson = await Lesson.findByIdAndDelete(req.params.id);
 
     if (!lesson) {
@@ -184,12 +213,13 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // Remove lesson from course
     if (lesson.courseId) {
       await Course.findByIdAndUpdate(lesson.courseId, {
         $pull: { lessonIds: lesson._id }
       });
     }
+
+    console.log('✅ Lesson deleted:', req.params.id);
 
     res.json({
       success: true,
