@@ -59,10 +59,9 @@ const userSchema = new mongoose.Schema({
     purchasedAt: Date
   }],
   completedLessons: {
-    type: Map,
-    of: Boolean,
-    default: {}
-  },
+  type: [String],      // ✅ Array of strings
+  default: []
+}
   progress: {
     type: Map,
     of: Number,
