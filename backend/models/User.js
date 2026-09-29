@@ -54,19 +54,18 @@ const userSchema = new mongoose.Schema({
     default: 'Beginner'
   },
   purchasedLessons: [{
-    courseKey: String,
-    lessonId: String,
-    purchasedAt: Date
-  }],
-  completedLessons: {
-  type: [String],      // ✅ Array of strings
+  courseKey: String,
+  lessonId: String,
+  purchasedAt: Date
+}],
+completedLessons: {
+  type: [String],                    // ✅ Array of lesson keys
   default: []
-}
-  progress: {
-    type: Map,
-    of: Number,
-    default: {}
-  },
+},
+progress: {
+  type: mongoose.Schema.Types.Mixed, // ✅ Object: { courseId: percentage }
+  default: {}
+},
   enrolledCourses: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course'
