@@ -21,7 +21,6 @@ const LoginForm = ({
   const [isLocked, setIsLocked] = useState(false);
   const [showResendVerification, setShowResendVerification] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
-  const [showDemoCredentials, setShowDemoCredentials] = useState(false);
 
   // Check for saved credentials on mount
   useEffect(() => {
@@ -93,9 +92,9 @@ const LoginForm = ({
       }
     } catch (err) {
       console.error('Login error:', err);
-      
+
       const errorMessage = err.message?.toLowerCase() || '';
-      
+
       if (errorMessage.includes('failed to fetch') || errorMessage.includes('network')) {
         setError('⚠️ Cannot connect to server. Please try again later.');
       } else if (errorMessage.includes('verify your email')) {
@@ -168,29 +167,6 @@ const LoginForm = ({
   };
 
   const clearError = () => {
-    setError('');
-    setShowResendVerification(false);
-    setResendMessage('');
-  };
-
-  // ✅ UPDATED: Demo credentials with simpler password
-  const fillDemoCredentials = (type) => {
-    if (type === 'admin') {
-      setFormData({
-        email: 'codesmartng1@gmail.com',
-        password: 'Admin@1234'
-      });
-    } else if (type === 'teacher') {
-      setFormData({
-        email: 'kabiralkasim6@gmail.com',
-        password: 'Admin@1234'
-      });
-    } else if (type === 'student') {
-      setFormData({
-        email: 'kabiralkasim9@gmail.com',
-        password: 'Admin@1234'
-      });
-    }
     setError('');
     setShowResendVerification(false);
     setResendMessage('');
@@ -333,40 +309,6 @@ const LoginForm = ({
           </button>
         </form>
 
-        {/* ✅ UPDATED: Demo credentials with simpler password */}
-        <div className="demo-credentials">
-          <button 
-            className="demo-toggle"
-            onClick={() => setShowDemoCredentials(!showDemoCredentials)}
-            type="button"
-          >
-            {showDemoCredentials ? '🔽 Hide Demo Accounts' : '▶️ Quick Login with Demo Accounts'}
-          </button>
-
-          {showDemoCredentials && (
-            <div className="demo-grid">
-              <div className="demo-card" onClick={() => fillDemoCredentials('admin')}>
-                <div className="demo-role">👑 Admin</div>
-                <div className="demo-email">codesmartng1@gmail.com</div>
-                <div className="demo-password">Admin@1234</div>
-                <div className="demo-hint">Click to fill</div>
-              </div>
-              <div className="demo-card" onClick={() => fillDemoCredentials('teacher')}>
-                <div className="demo-role">👨‍🏫 Teacher</div>
-                <div className="demo-email">kabiralkasim6@gmail.com</div>
-                <div className="demo-password">Admin@1234</div>
-                <div className="demo-hint">Click to fill</div>
-              </div>
-              <div className="demo-card" onClick={() => fillDemoCredentials('student')}>
-                <div className="demo-role">👨‍🎓 Student</div>
-                <div className="demo-email">kabiralkasim9@gmail.com</div>
-                <div className="demo-password">Admin@1234</div>
-                <div className="demo-hint">Click to fill</div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <div className="auth-footer">
           <div className="footer-section">
             <p>Don't have an account?</p>
@@ -409,7 +351,6 @@ const LoginForm = ({
           </div>
         </div>
 
-        {/* ✅ UPDATED: Changed from Firebase to Custom Backend */}
         <div className="security-notice">
           <span className="security-icon">🔒</span>
           <p>Your login is secure and encrypted</p>
