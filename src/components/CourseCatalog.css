@@ -1,451 +1,560 @@
-/* Course Catalog Styles */
+/* ============================================
+   COURSE CATALOG — FACEBOOK-STYLE DESIGN
+   ============================================ */
+
+/* Container */
 .course-catalog {
-  padding: 2rem;
-  max-width: 1200px;
+  padding: 16px;
+  max-width: 680px;
   margin: 0 auto;
+  background: #f0f2f5;
+  min-height: 100vh;
 }
 
+/* Header */
 .catalog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 1rem;
 }
 
 .catalog-header h2 {
-  color: #2c3e50;
+  color: #050505;
   margin: 0;
+  font-size: 24px;
+  font-weight: 700;
 }
 
 .course-controls {
   display: flex;
-  gap: 1rem;
+  gap: 8px;
 }
 
 .control-btn {
-  background: #3498db;
-  color: white;
+  background: #e4e6eb;
+  color: #050505;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
 }
 
 .control-btn:hover {
-  background: #2980b9;
+  background: #d8dadf;
 }
 
+/* Courses Grid */
 .courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
+/* Course Card — Facebook post style */
 .course-card {
-  background: white;
+  background: #ffffff;
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e1e8ed;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: none;
+  transition: box-shadow 0.2s;
 }
 
 .course-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
+/* Course Header */
 .course-header {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .course-thumbnail {
-  font-size: 2.5rem;
+  width: 48px;
+  height: 48px;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
 .course-title-section {
   flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .course-title-section h3 {
   margin: 0;
-  color: #2c3e50;
-  font-size: 1.4rem;
+  color: #050505;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.course-teacher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #65676b;
+}
+
+.teacher-whatsapp-btn {
+  color: #1877f2;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.teacher-whatsapp-btn:hover {
+  text-decoration: underline;
 }
 
 .expand-btn {
-  background: #27ae60;
-  color: white;
+  background: #e7f3ff;
+  color: #1877f2;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  transition: background-color 0.3s ease;
+  font-size: 13px;
+  font-weight: 600;
+  align-self: flex-start;
+  transition: background 0.2s;
 }
 
 .expand-btn:hover {
-  background: #219a52;
+  background: #dbeafe;
 }
 
+/* Course Description */
 .course-description {
-  color: #7f8c8d;
-  margin-bottom: 1rem;
+  color: #050505;
+  margin: 8px 0 12px 0;
   line-height: 1.5;
+  font-size: 15px;
 }
 
+/* Pricing Summary */
+.course-pricing-summary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  padding: 8px 0;
+  border-top: 1px solid #e4e6eb;
+  border-bottom: 1px solid #e4e6eb;
+}
+
+.free-lessons {
+  color: #42b72a;
+  font-weight: 600;
+}
+
+.paid-lessons {
+  color: #f7b928;
+  font-weight: 600;
+}
+
+/* Course Meta */
 .course-meta {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: #666;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #65676b;
 }
 
 .progress-text {
   font-weight: 600;
-  color: #2c3e50;
+  color: #050505;
 }
 
 .completed-lessons {
-  color: #7f8c8d;
+  color: #65676b;
 }
 
+/* Progress Bar */
 .progress-bar {
   width: 100%;
   height: 8px;
-  background: #ecf0f1;
+  background: #e4e6eb;
   border-radius: 4px;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  background: linear-gradient(90deg, #1877f2, #4599ff);
   border-radius: 4px;
   transition: width 0.5s ease;
-  color: white;
-  font-size: 0.7rem;
+  color: #ffffff;
+  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 700;
 }
 
+/* Certificate Button */
 .certificate-btn {
-  background: #f39c12;
-  color: white;
+  background: linear-gradient(135deg, #f7b928, #f5a623);
+  color: #ffffff;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   cursor: pointer;
   width: 100%;
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 600;
-  transition: background-color 0.3s ease;
-  margin-bottom: 1rem;
+  transition: opacity 0.2s;
+  margin-bottom: 8px;
 }
 
 .certificate-btn:hover {
-  background: #e67e22;
+  opacity: 0.9;
 }
 
-/* Lessons List */
+/* ============================================
+   LESSONS LIST — Facebook feed style
+   ============================================ */
+
 .lessons-list {
-  margin-top: 1rem;
-  border-top: 1px solid #ecf0f1;
-  padding-top: 1rem;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e4e6eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .lesson-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border: 1px solid #ecf0f1;
+  padding: 12px;
   border-radius: 8px;
-  margin-bottom: 0.75rem;
-  background: #f8f9fa;
-  transition: all 0.3s ease;
+  background: #f0f2f5;
+  transition: background 0.2s;
+  gap: 12px;
 }
 
 .lesson-item:hover {
-  background: #e8f4fd;
-  border-color: #3498db;
+  background: #e7f3ff;
 }
 
 .lesson-item.completed {
-  background: #d4edda;
-  border-color: #28a745;
+  background: #e6f4ea;
+}
+
+.lesson-item.locked {
+  opacity: 0.85;
 }
 
 .lesson-info {
   flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .lesson-main-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 2px;
 }
 
 .lesson-title {
   font-weight: 600;
-  color: #2c3e50;
+  color: #050505;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .lesson-duration {
-  font-size: 0.8rem;
-  color: #7f8c8d;
+  font-size: 12px;
+  color: #65676b;
 }
 
+.lesson-price {
+  color: #f7b928;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.lesson-price.purchased {
+  color: #42b72a;
+}
+
+.lock-icon {
+  font-size: 12px;
+}
+
+/* Lesson Features (icons) */
 .lesson-features {
   display: flex;
-  gap: 0.5rem;
+  gap: 6px;
   align-items: center;
+  font-size: 13px;
 }
 
-.media-indicator, .quiz-indicator, .completion-indicator {
-  font-size: 0.9rem;
+.media-indicator,
+.quiz-indicator,
+.completion-indicator,
+.lock-indicator {
   cursor: help;
 }
 
+/* Lesson Actions */
 .lesson-actions {
-  margin-left: 1rem;
+  flex-shrink: 0;
 }
 
 .start-btn {
-  background: #3498db;
-  color: white;
+  background: #1877f2;
+  color: #ffffff;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
   white-space: nowrap;
 }
 
-.start-btn:hover {
-  background: #2980b9;
+.start-btn:hover:not(:disabled) {
+  background: #166fe5;
+}
+
+.purchase-btn {
+  background: #f7b928;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.purchase-btn:hover:not(:disabled) {
+  background: #e5a91a;
 }
 
 .completed-btn {
-  background: #95a5a6;
-  color: white;
+  background: #e4e6eb;
+  color: #65676b;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 8px 16px;
   border-radius: 6px;
   cursor: not-allowed;
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-/* Lesson View Styles */
+.start-btn:disabled,
+.purchase-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   LESSON VIEW — Full-screen style
+   ============================================ */
+
 .course-lesson {
-  max-width: 800px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 16px;
+  background: #f0f2f5;
+  min-height: 100vh;
 }
 
 .back-btn {
-  background: #95a5a6;
-  color: white;
+  background: #e4e6eb;
+  color: #050505;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
   cursor: pointer;
-  margin-bottom: 2rem;
-  font-size: 1rem;
-  transition: background-color 0.3s ease;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
 }
 
 .back-btn:hover {
-  background: #7f8c8d;
+  background: #d8dadf;
 }
 
+/* Lesson Header */
 .lesson-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #ecf0f1;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .lesson-header h2 {
   margin: 0;
-  color: #2c3e50;
+  color: #050505;
+  font-size: 20px;
+  font-weight: 700;
+  flex: 1;
 }
 
 .completion-badge {
-  background: #27ae60;
-  color: white;
-  padding: 0.5rem 1rem;
+  background: #42b72a;
+  color: #ffffff;
+  padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.price-badge {
+  background: #f7b928;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
   font-weight: 600;
 }
 
-.lesson-content {
-  background: white;
-  padding: 2rem;
+.price-badge.purchased {
+  background: #42b72a;
+}
+
+/* Teacher Info */
+.teacher-info {
+  background: #ffffff;
+  padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #050505;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.whatsapp-contact-btn {
+  background: #25d366;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.whatsapp-contact-btn:hover {
+  background: #1da851;
+}
+
+/* Lesson Content */
+.lesson-content {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
 }
 
 .lesson-content p {
   line-height: 1.6;
-  color: #2c3e50;
-  margin-bottom: 1rem;
+  color: #050505;
+  margin: 0 0 12px 0;
+  font-size: 15px;
 }
 
+.lesson-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Multimedia Container */
+.multimedia-container {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.multimedia-container h3 {
+  margin: 0 0 12px 0;
+  color: #050505;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Quiz Section */
 .quiz-section {
-  background: #e8f4fd;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
   text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .quiz-section h3 {
-  margin-top: 0;
-  color: #2c3e50;
+  margin: 0 0 8px 0;
+  color: #050505;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.quiz-section p {
+  color: #65676b;
+  font-size: 14px;
+  margin-bottom: 16px;
 }
 
 .start-quiz-btn {
-  background: #e74c3c;
-  color: white;
+  background: #1877f2;
+  color: #ffffff;
   border: none;
-  padding: 1rem 2rem;
-  border-radius: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 15px;
   font-weight: 600;
-  transition: background-color 0.3s ease;
+  transition: background 0.2s;
 }
 
 .start-quiz-btn:hover {
-  background: #c0392b;
+  background: #166fe5;
 }
 
-.lesson-navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid #ecf0f1;
-}
-
-.lesson-navigation button {
-  background: #3498db;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: background-color 0.3s ease;
-}
-
-.lesson-navigation button:hover:not(:disabled) {
-  background: #2980b9;
-}
-
-.lesson-navigation button:disabled {
-  background: #bdc3c7;
-  cursor: not-allowed;
-}
-
-.complete-btn {
-  background: #27ae60 !important;
-}
-
-.complete-btn:hover:not(:disabled) {
-  background: #219a52 !important;
-}
-
-/* No Courses State */
-.no-courses {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.no-courses p {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .course-catalog {
-    padding: 1rem;
-  }
-  
-  .courses-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .catalog-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .course-controls {
-    justify-content: center;
-  }
-  
-  .course-title-section {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .lesson-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-  
-  .lesson-info {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-  
-  .lesson-actions {
-    margin-left: 0;
-    text-align: center;
-  }
-  
-  .lesson-navigation {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .lesson-navigation button {
-    width: 100%;
-  }
-}
+/* Payment Required
