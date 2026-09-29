@@ -334,7 +334,7 @@ const LoginForm = ({
         </form>
 
         {/* ✅ UPDATED: Demo credentials with simpler password */}
-        <div className="demo-credentials">
+        {/*<div className="demo-credentials">
           <button 
             className="demo-toggle"
             onClick={() => setShowDemoCredentials(!showDemoCredentials)}
@@ -365,7 +365,7 @@ const LoginForm = ({
               </div>
             </div>
           )}
-        </div>
+        </div>*/}
 
         <div className="auth-footer">
           <div className="footer-section">
