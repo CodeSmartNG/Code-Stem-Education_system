@@ -554,53 +554,80 @@ const handleAddLesson = async (e) => {
   // MULTIMEDIA MANAGEMENT FUNCTIONS
   // ============================================
 
-  // ✅ Add Multimedia
-  const handleAddMultimedia = async (e) => {
-    e.preventDefault();
-    setIsUploading(true);
-    setUploadProgress(0);
+// ✅ Add Multimedia
+const handleAddMultimedia = async (e) => {
+  e.preventDefault();
 
-    try {
-      const progressInterval = simulateUploadProgress();
-      const multimediaData = { ...newMultimediaForm };
+  // ✅ Validate file first
+  if (!newMultimediaForm.file) {
+    alert('⚠️ Please select a file first');
+    return;
+  }
 
-      if (newMultimediaForm.file) {
-        const currentUser = await getCurrentUser();
-        const filePath = `teachers/${currentUser.uid}/media/${Date.now()}_${newMultimediaForm.fileName}`;
-        const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
+  if (!managingMultimedia?.lesson) {
+    alert('⚠️ No lesson selected');
+    return;
+  }
 
-        multimediaData.url = fileUrl;
-        multimediaData.fileName = newMultimediaForm.fileName;
-        multimediaData.fileSize = newMultimediaForm.file.size;
-        multimediaData.fileType = newMultimediaForm.file.type;
-        multimediaData.firebasePath = filePath;
-      }
+  setIsUploading(true);
+  setUploadProgress(0);
 
-      await addMultimediaToLesson(
-        managingMultimedia.lesson.id,
-        multimediaData
-      );
+  try {
+    const progressInterval = simulateUploadProgress();
 
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      alert('✅ Multimedia content added successfully!');
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.id || currentUser?.uid;
 
-      setNewMultimediaForm({
-        type: 'video',
-        file: null,
-        fileName: '',
-        title: '',
-        description: ''
-      });
-      await loadData();
-      setIsUploading(false);
-    } catch (error) {
-      console.error('Error adding multimedia:', error);
-      alert('❌ Error adding multimedia: ' + error.message);
-      setIsUploading(false);
+    if (!userId) {
+      throw new Error('Please log in again');
     }
-  };
 
+    // ✅ Upload the file
+    const filePath = `teachers/${userId}/media/${Date.now()}_${newMultimediaForm.fileName}`;
+    console.log('📤 Uploading:', newMultimediaForm.file.name, 'size:', newMultimediaForm.file.size);
+
+    const fileUrl = await uploadFileToFirebase(newMultimediaForm.file, filePath);
+    console.log('✅ Uploaded URL:', fileUrl);
+
+    if (!fileUrl) {
+      throw new Error('Upload returned no URL');
+    }
+
+    const multimediaData = {
+      type: newMultimediaForm.type || 'video',
+      url: fileUrl,
+      title: newMultimediaForm.title || newMultimediaForm.fileName || 'Untitled',
+      description: newMultimediaForm.description || '',
+      fileName: newMultimediaForm.fileName,
+      fileSize: newMultimediaForm.file.size,
+      fileType: newMultimediaForm.file.type,
+      firebasePath: filePath
+    };
+
+    const lessonId = managingMultimedia.lesson.id || managingMultimedia.lesson._id;
+
+    await addMultimediaToLesson(lessonId, multimediaData);
+    console.log('✅ Multimedia attached to lesson');
+
+    clearInterval(progressInterval);
+    setUploadProgress(100);
+    alert('✅ Multimedia content added successfully!');
+
+    setNewMultimediaForm({
+      type: 'video',
+      file: null,
+      fileName: '',
+      title: '',
+      description: ''
+    });
+    await loadData();
+  } catch (error) {
+    console.error('❌ Error adding multimedia:', error);
+    alert('❌ Error adding multimedia: ' + error.message);
+  } finally {
+    setIsUploading(false);
+  }
+};
   // ✅ Delete Multimedia
   const handleDeleteMultimedia = async (multimediaId, multimediaTitle) => {
     if (window.confirm(`⚠️ Are you sure you want to delete "${multimediaTitle}"?`)) {
