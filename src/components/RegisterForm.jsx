@@ -1,3 +1,5 @@
+// src/components/RegisterForm.jsx
+
 import React, { useState } from 'react';
 import './AuthForms.css';
 
@@ -22,37 +24,37 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
   const calculatePasswordStrength = (password) => {
     let strength = 0;
     let criteria = [];
-    
+
     // Length check
     if (password.length >= 8) {
       strength++;
       criteria.push('length');
     }
-    
+
     // Uppercase and lowercase
     if (password.match(/[a-z]/) && password.match(/[A-Z]/)) {
       strength++;
       criteria.push('case');
     }
-    
+
     // Numbers
     if (password.match(/\d/)) {
       strength++;
       criteria.push('number');
     }
-    
+
     // Special characters
     if (password.match(/[^a-zA-Z\d]/)) {
       strength++;
       criteria.push('special');
     }
-    
+
     // Additional length bonus
     if (password.length >= 12) {
       strength = Math.min(strength + 1, 5);
       criteria.push('long');
     }
-    
+
     return { strength, criteria };
   };
 
@@ -184,21 +186,21 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
   const getPasswordRequirements = () => {
     const password = formData.password;
     return [
-      { 
-        met: password.length >= 8, 
-        text: 'At least 8 characters' 
+      {
+        met: password.length >= 8,
+        text: 'At least 8 characters'
       },
-      { 
-        met: /[a-z]/.test(password) && /[A-Z]/.test(password), 
-        text: 'Uppercase and lowercase letters' 
+      {
+        met: /[a-z]/.test(password) && /[A-Z]/.test(password),
+        text: 'Uppercase and lowercase letters'
       },
-      { 
-        met: /\d/.test(password), 
-        text: 'At least one number' 
+      {
+        met: /\d/.test(password),
+        text: 'At least one number'
       },
-      { 
-        met: /[^a-zA-Z\d]/.test(password), 
-        text: 'At least one special character' 
+      {
+        met: /[^a-zA-Z\d]/.test(password),
+        text: 'At least one special character'
       }
     ];
   };
@@ -311,23 +313,23 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
           {formData.password && (
             <div className="password-strength-container">
               <div className="password-strength">
-                <div 
+                <div
                   className={`password-strength-bar ${passwordStrength >= 1 ? 'active' : ''}`}
                   style={{ backgroundColor: passwordStrength >= 1 ? strengthInfo.color : '' }}
                 ></div>
-                <div 
+                <div
                   className={`password-strength-bar ${passwordStrength >= 2 ? 'active' : ''}`}
                   style={{ backgroundColor: passwordStrength >= 2 ? strengthInfo.color : '' }}
                 ></div>
-                <div 
+                <div
                   className={`password-strength-bar ${passwordStrength >= 3 ? 'active' : ''}`}
                   style={{ backgroundColor: passwordStrength >= 3 ? strengthInfo.color : '' }}
                 ></div>
-                <div 
+                <div
                   className={`password-strength-bar ${passwordStrength >= 4 ? 'active' : ''}`}
                   style={{ backgroundColor: passwordStrength >= 4 ? strengthInfo.color : '' }}
                 ></div>
-                <div 
+                <div
                   className={`password-strength-bar ${passwordStrength >= 5 ? 'active' : ''}`}
                   style={{ backgroundColor: passwordStrength >= 5 ? strengthInfo.color : '' }}
                 ></div>
@@ -371,8 +373,8 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
               placeholder="Confirm your password"
               autoComplete="new-password"
               className={
-                formData.confirmPassword && formData.password === formData.confirmPassword 
-                  ? 'valid' 
+                formData.confirmPassword && formData.password === formData.confirmPassword
+                  ? 'valid'
                   : formData.confirmPassword ? 'invalid' : ''
               }
             />
@@ -408,14 +410,14 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
               disabled={isLoading || isRegistering}
             />
             <span className="checkbox-text">
-              I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms and Conditions</a> and 
+              I agree to the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms and Conditions</a> and
               <a href="/privacy" target="_blank" rel="noopener noreferrer"> Privacy Policy</a> *
             </span>
           </label>
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className={`btn-primary ${isLoading ? 'loading' : ''}`}
           disabled={!isFormValid() || isLoading || isRegistering}
         >
@@ -425,7 +427,7 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
               Creating Account...
             </>
           ) : (
-            '🚀 Create Account & Send Confirmation'
+            '🚀 Create Account'
           )}
         </button>
       </form>
@@ -433,8 +435,8 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
       <div className="auth-links">
         <p>
           Already have an account?{' '}
-          <span 
-            onClick={isLoading || isRegistering ? undefined : onSwitchToLogin} 
+          <span
+            onClick={isLoading || isRegistering ? undefined : onSwitchToLogin}
             className={`link ${(isLoading || isRegistering) ? 'disabled' : ''}`}
           >
             Login here
@@ -442,8 +444,8 @@ const RegisterForm = ({ onRegister, onSwitchToLogin, isRegistering }) => {
         </p>
         <p className="auth-alt-option">
           Want to teach?{' '}
-          <span 
-            onClick={isLoading || isRegistering ? undefined : () => onSwitchToLogin('teacher-register')} 
+          <span
+            onClick={isLoading || isRegistering ? undefined : () => onSwitchToLogin('teacher-register')}
             className={`link ${(isLoading || isRegistering) ? 'disabled' : ''}`}
           >
             Register as Teacher
