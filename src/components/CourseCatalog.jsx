@@ -584,14 +584,13 @@ const completeLesson = async (courseKey, lessonId) => {
             </button>
           )}
 
-          <button 
-            onClick={() => completeLesson(selectedCourse, lesson.id)}
-            className="complete-btn"
-            disabled={isCompleted || (!hasAccess && !lesson.isFree)}
-          >
-            {isCompleted ? 'Completed' : 'Complete Lesson'}
-          </button>
-
+<button 
+  onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
+  className="complete-btn"
+  disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
+>
+  {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
+</button>
           {currentLesson < (course.lessons?.length || 0) - 1 && (
             <button onClick={() => setCurrentLesson(currentLesson + 1)}>
               Next Lesson →
