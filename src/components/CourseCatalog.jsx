@@ -8,7 +8,8 @@ import {
   purchaseLesson, 
   getTeacherWhatsAppUrl,
   getMultimediaByLesson,
-  getLessonById
+  getLessonById,
+  getCourseById
 } from '../utils/storageAPI';  // ✅ FIXED: was '../utils/storage'
 import Quiz from './Quiz';
 import MultimediaViewer from './MultimediaViewer';
