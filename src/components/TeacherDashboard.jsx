@@ -299,6 +299,69 @@ setCoursesState(teacherCourses || []);
     }
   };
 
+// ✅ Add Course
+const handleAddCourse = async (e) => {
+  e.preventDefault();
+
+  if (!newCourseForm.title?.trim() || !newCourseForm.description?.trim()) {
+    alert('⚠️ Please fill in title and description');
+    return;
+  }
+
+  setIsUploading(true);
+
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      alert('Please log in first');
+      return;
+    }
+
+    const userId = currentUser.id || currentUser.uid;
+    if (!userId) {
+      throw new Error('User ID not found');
+    }
+
+    const courseData = {
+      title: newCourseForm.title.trim(),
+      description: newCourseForm.description.trim(),
+      thumbnail: newCourseForm.thumbnail || '📚',
+      teacherId: userId,
+      teacherName: currentUser.name || 'Teacher',
+      enrolledStudents: 0,
+      isPublished: true
+    };
+
+    console.log('📝 Creating course:', courseData);
+
+    const result = await createCourse(courseData);
+    console.log('✅ Course created:', result);
+
+    alert('✅ Course added successfully!');
+
+    // Reset form
+    setNewCourseForm({
+      title: '',
+      description: '',
+      thumbnail: '📚',
+      teacherId: ''
+    });
+
+    // Reload courses and switch tab
+    await loadData();
+    setActiveTab('my-courses');
+
+  } catch (error) {
+    console.error('❌ Error adding course:', error);
+    alert('❌ Error adding course: ' + error.message);
+  } finally {
+    setIsUploading(false);
+  }
+};
+
+
+
+  
 // ✅ Add Lesson
 const handleAddLesson = async (e) => {
   e.preventDefault();
