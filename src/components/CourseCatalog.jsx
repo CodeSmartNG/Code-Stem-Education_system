@@ -333,12 +333,20 @@ const CourseCatalog = ({ student, setStudent }) => {
       }
 
       setSelectedCourse(courseKey);
-      setCurrentLesson(lessonIndex);
-      setShowQuiz(false);
+setCurrentLesson(lessonIndex);
+setShowQuiz(false);
 
-      await loadLessonMultimedia(courseKey, lesson.id);
+// ✅ Trigger enrollment on course access
+try {
+  await getCourseById(courseKey);
+  console.log('✅ Course accessed — enrollment triggered');
+} catch (err) {
+  console.warn('Enrollment trigger failed:', err);
+}
 
-      window.scrollTo(0, 0);
+await loadLessonMultimedia(courseKey, lesson.id);
+
+window.scrollTo(0, 0);
     } catch (err) {
       console.error('Error starting lesson:', err);
       setError('Failed to start lesson. Please try again.');
