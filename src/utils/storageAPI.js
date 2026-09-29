@@ -157,10 +157,18 @@ export const getStudents = async () => {
 
 export const updateStudent = async (student) => {
   try {
-    const response = await api.updateUser(student.id, student);
+    const userId = student.id || student._id;
+
+    if (!userId) {
+      throw new Error('No user ID provided to updateStudent');
+    }
+
+    console.log('📝 updateStudent — userId:', userId);
+    const response = await api.updateUser(userId, student);
+    console.log('✅ updateStudent response:', response);
     return response.user;
   } catch (error) {
-    console.error('Error updating student:', error);
+    console.error('❌ Error updating student:', error);
     throw error;
   }
 };
