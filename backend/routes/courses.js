@@ -57,16 +57,14 @@ router.post('/', [
 });
 
 // ✅ Get all courses (published only for students)
-
+// ✅ Get all courses (published only for students)
 router.get('/', auth, async (req, res) => {
   try {
     let query = {};
 
     if (req.user.role === 'student') {
-      // Students see only published courses
       query.isPublished = true;
     } else if (req.user.role === 'teacher') {
-      // Teachers see only their own courses (draft or published)
       query.teacherId = req.user._id;
     }
     // Admins see ALL courses
@@ -77,44 +75,44 @@ router.get('/', auth, async (req, res) => {
     console.log('📋 Query:', JSON.stringify(query));
 
     const courses = await Course.find(query)
-  .populate('teacherId', 'name email whatsappNumber')
-  .populate('lessonIds')
-  .sort({ createdAt: -1 });
-
-// ✅ Also normalize lessons inside each course
-const normalizedCourses = courses.map(course => {
-  const obj = course.toObject();
-  if (obj.lessonIds && Array.isArray(obj.lessonIds)) {
-    obj.lessons = obj.lessonIds.map(lesson => ({
-      ...lesson,
-      id: lesson._id ? lesson._id.toString() : lesson.id,
-      _id: lesson._id ? lesson._id.toString() : lesson._id
-    }));
-  }
-  // ✅ Add 'id' at top level
-  obj.id = obj._id.toString();
-  return obj;
-});
-
-res.json({
-  success: true,
-  count: normalizedCourses.length,
-  courses: normalizedCourses,
-  data: normalizedCourses
-});
+      .populate('teacherId', 'name email whatsappNumber')
+      .populate('lessonIds')
+      .sort({ createdAt: -1 });
 
     console.log('✅ Courses found:', courses.length);
     console.log('📚 Titles:', courses.map(c => c.title));
     console.log('=========================\n');
 
-    res.json({
-      success: true,
-      count: courses.length,
-      data: courses
+    // ✅ Normalize and send — ONLY ONE res.json()
+    const normalizedCourses = courses.map(course => {
+      const obj = course.toObject();
+      obj.id = obj._id.toString();
+      obj._id = obj._id.toString();
+
+      // Populate lessons from lessonIds
+      if (obj.lessonIds && Array.isArray(obj.lessonIds)) {
+        obj.lessons = obj.lessonIds.map(lesson => ({
+          ...lesson,
+          id: lesson._id ? lesson._id.toString() : lesson.id,
+          _id: lesson._id ? lesson._id.toString() : lesson._id
+        }));
+      } else {
+        obj.lessons = [];
+      }
+
+      return obj;
     });
+
+    return res.json({
+      success: true,
+      count: normalizedCourses.length,
+      courses: normalizedCourses,
+      data: normalizedCourses
+    });
+
   } catch (error) {
     console.error('Get courses error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message
     });
