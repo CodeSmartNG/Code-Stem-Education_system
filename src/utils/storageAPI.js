@@ -857,6 +857,7 @@ export default {
   getCourses,
   getAllCourses,
   getCoursesByTeacher,
+  getCourseById,     
   createCourse,
   updateCourse,
   deleteCourse,
