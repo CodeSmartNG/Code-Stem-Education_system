@@ -510,18 +510,31 @@ setCurrentUserState(userWithAlias);
   // ============================================
 
   const updateStudentData = useCallback(async (updatedStudent) => {
-    try {
-      await updateStudent(updatedStudent);
+  try {
+    console.log('📝 updateStudentData called with:', updatedStudent);
+    console.log('   id:', updatedStudent.id);
+    console.log('   _id:', updatedStudent._id);
 
-      const { password, ...studentWithoutPassword } = updatedStudent;
-      setCurrentUserState(studentWithoutPassword);
-
-      const loadedStudents = await getStudents();
-      setStudentsState(loadedStudents || []);
-    } catch (error) {
-      console.error('Error updating student:', error);
+    if (!updatedStudent.id && !updatedStudent._id) {
+      console.error('❌ No user ID to update');
+      alert('Error: user ID missing. Please log out and log in again.');
+      return;
     }
-  }, []);
+
+    await updateStudent(updatedStudent);
+
+    const { password, ...studentWithoutPassword } = updatedStudent;
+    setCurrentUserState(studentWithoutPassword);
+
+    const loadedStudents = await getStudents();
+    setStudentsState(loadedStudents || []);
+
+    console.log('✅ Student updated successfully');
+  } catch (error) {
+    console.error('❌ Error updating student:', error);
+    alert('Failed to save progress: ' + error.message);
+  }
+}, []);
 
   const updateCurrentUser = useCallback(async (updatedUser) => {
     try {
