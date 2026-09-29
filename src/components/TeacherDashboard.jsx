@@ -1254,15 +1254,14 @@ const handleAddMultimedia = async (e) => {
             </div>
 
             {selectedCourse && (
-              <div className="lessons-list">
-                {courseLessons.length === 0 ? (
-                  <div className="no-lessons">
-                    <p>No lessons in this course yet.</p>
-                    <button onClick={() => setActiveTab('add-lesson')} className="create-lesson-btn">
-                      ➕ Add Your First Lesson
-                    </button>
-                  </div>
-                
+                    <div className="lessons-list">
+        {courseLessons.length === 0 ? (
+          <div className="no-lessons">
+            <p>No lessons in this course yet.</p>
+            <button onClick={() => setActiveTab('add-lesson')} className="create-lesson-btn">
+              ➕ Add Your First Lesson
+            </button>
+          </div>
         ) : (
           courseLessons.map(lesson => (
             <div key={lesson.id || lesson._id} className="lesson-teacher-card">
