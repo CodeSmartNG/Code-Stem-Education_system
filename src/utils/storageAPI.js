@@ -429,6 +429,11 @@ export const uploadFileToFirebase = uploadFile;
 
 export const canAccessLesson = async (userId, courseKey, lessonId) => {
   try {
+    // ✅ Guard against missing userId
+    if (!userId) {
+      return false;
+    }
+
     const response = await apiCall(
       `/lessons/${lessonId}/access?userId=${userId}&courseKey=${courseKey}`
     );
