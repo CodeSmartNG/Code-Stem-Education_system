@@ -36,6 +36,12 @@ const CourseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Lesson'
   }],
+  // ✅ NEW — List of students who enrolled
+  enrolledStudentIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  // ✅ Auto-tracked count (keep in sync with enrolledStudentIds length)
   enrolledStudents: {
     type: Number,
     default: 0
@@ -61,7 +67,7 @@ CourseSchema.virtual('lessonsCount').get(function() {
 
 // Virtual for enrolled students count
 CourseSchema.virtual('studentsCount').get(function() {
-  return this.enrolledStudents || 0;
+  return this.enrolledStudentIds?.length || this.enrolledStudents || 0;
 });
 
 module.exports = mongoose.model('Course', CourseSchema);
