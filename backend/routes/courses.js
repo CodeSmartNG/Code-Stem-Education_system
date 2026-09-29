@@ -132,13 +132,20 @@ router.get('/:id', auth, async (req, res) => {
       });
     }
 
-    // Check if user can access this course
-    if (!course.isPublished && req.user.role !== 'admin' && 
-        req.user.role !== 'teacher' && course.teacherId._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Course not published.'
-      });
+    // ✅ Auto-enroll student on first access
+    if (req.user.role === 'student') {
+      // Check if already enrolled
+      const alreadyEnrolled = course.enrolledStudentIds?.some(
+        id => id.toString() === req.user._id.toString()
+      );
+
+      if (!alreadyEnrolled) {
+        course.enrolledStudentIds = course.enrolledStudentIds || [];
+        course.enrolledStudentIds.push(req.user._id);
+        course.enrolledStudents = (course.enrolledStudents || 0) + 1;
+        await course.save();
+        console.log('✅ Student auto-enrolled:', req.user._id);
+      }
     }
 
     res.json({
@@ -153,6 +160,8 @@ router.get('/:id', auth, async (req, res) => {
     });
   }
 });
+
+
 
 // ✅ Update course
 router.put('/:id', [auth, isTeacher], async (req, res) => {
