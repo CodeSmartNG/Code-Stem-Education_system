@@ -386,31 +386,53 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  const completeLesson = (courseKey, lessonId) => {
-    try {
-      if (!courses || !courses[courseKey]) return;
+const completeLesson = async (courseKey, lessonId) => {
+  try {
+    console.log('🎯 Complete Lesson clicked:', { courseKey, lessonId });
 
-      const updatedStudent = { ...student };
-      const lessonKey = `${courseKey}-${lessonId}`;
-
-      if (!updatedStudent.completedLessons?.includes(lessonKey)) {
-        if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
-        updatedStudent.completedLessons.push(lessonKey);
-
-        const totalLessons = courses[courseKey].lessons?.length || 0;
-        const completedLessons = courses[courseKey].lessons?.filter(
-          lesson => updatedStudent.completedLessons?.includes(`${courseKey}-${lesson.id}`)
-        ).length || 0;
-
-        if (!updatedStudent.progress) updatedStudent.progress = {};
-        updatedStudent.progress[courseKey] = Math.min((completedLessons / totalLessons) * 100, 100);
-
-        setStudent(updatedStudent);
-      }
-    } catch (err) {
-      console.error('Error completing lesson:', err);
+    if (!courses || !courses[courseKey]) {
+      console.warn('⚠️ Course not found:', courseKey);
+      return;
     }
-  };
+
+    if (!lessonId) {
+      console.warn('⚠️ No lesson ID');
+      return;
+    }
+
+    const lessonKey = `${courseKey}-${lessonId}`;
+
+    // Already completed?
+    if (student.completedLessons?.includes(lessonKey)) {
+      console.log('ℹ️ Already completed');
+      return;
+    }
+
+    // Build updated student
+    const updatedStudent = { ...student };
+    if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
+    updatedStudent.completedLessons.push(lessonKey);
+
+    // Recalculate progress
+    const totalLessons = courses[courseKey].lessons?.length || 0;
+    const completedLessons = courses[courseKey].lessons?.filter(
+      lesson => updatedStudent.completedLessons?.includes(`${courseKey}-${lesson.id || lesson._id}`)
+    ).length || 0;
+
+    if (!updatedStudent.progress) updatedStudent.progress = {};
+    updatedStudent.progress[courseKey] = Math.min((completedLessons / totalLessons) * 100, 100);
+
+    console.log('✅ New progress:', updatedStudent.progress[courseKey], '%');
+
+    // ✅ Await setStudent — it's async and saves to backend
+    await setStudent(updatedStudent);
+    console.log('✅ Saved to backend');
+
+  } catch (err) {
+    console.error('❌ Error completing lesson:', err);
+    alert('Failed to mark lesson complete. Please try again.');
+  }
+};
 
   const handleViewCertificate = (courseKey) => {
     try {
