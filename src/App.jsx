@@ -337,31 +337,76 @@ function App() {
     }
   }, [currentUser, handleUserActivity, resetInactivityTimer]);
 
-  // ============================================
-// URL TOKEN CHECK — Handle /verify-email and ?token=
+// ============================================
+// URL TOKEN CHECK
+// Handle Email Verification + Password Reset
 // ============================================
 
 useEffect(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
+  const queryToken = urlParams.get('token');
   const path = window.location.pathname;
 
-  console.log('🔍 URL check — path:', path, '| token:', token ? 'present' : 'missing');
+  console.log(
+    '🔍 URL check — path:',
+    path,
+    '| query token:',
+    queryToken ? 'present' : 'missing'
+  );
 
-  // Handle both /verify-email?token=xxx and /?token=xxx
-  if (token && (
-    path === '/verify-email' ||
-    path === '/verify-email/' ||
-    path === '/' ||
-    path === ''
-  )) {
-    console.log('📧 Email verification token detected, verifying...');
+  // ============================================
+  // PASSWORD RESET
+  // URL example:
+  // /reset-password/abc123xyz
+  // ============================================
 
-    handleEmailConfirmation(token).then((success) => {
+  const resetPasswordMatch = path.match(
+    /^\/reset-password\/([^/]+)\/?$/
+  );
+
+  if (resetPasswordMatch && resetPasswordMatch[1]) {
+    const tokenFromUrl = decodeURIComponent(
+      resetPasswordMatch[1]
+    );
+
+    console.log('🔐 Password reset token detected');
+
+    setResetToken(tokenFromUrl);
+    setCurrentView('reset-password');
+
+    return;
+  }
+
+  // ============================================
+  // EMAIL VERIFICATION
+  // URL examples:
+  // /verify-email?token=abc123
+  // /?token=abc123
+  // ============================================
+
+  if (
+    queryToken &&
+    (
+      path === '/verify-email' ||
+      path === '/verify-email/' ||
+      path === '/' ||
+      path === ''
+    )
+  ) {
+    console.log(
+      '📧 Email verification token detected, verifying...'
+    );
+
+    handleEmailConfirmation(queryToken).then((success) => {
       if (success) {
         console.log('✅ Email verified successfully');
-        // Clean up the URL so it doesn't retry
-        window.history.replaceState({}, document.title, '/');
+
+        window.history.replaceState(
+          {},
+          document.title,
+          '/'
+        );
+
         setCurrentView('login');
       } else {
         console.log('❌ Email verification failed');
@@ -795,13 +840,20 @@ case 'reset-password':
   return (
     <div className="login-container">
       <MessageDisplay />
+
       <ResetPassword
-        token={confirmationToken}
+        token={resetToken}
         onResetPassword={handleResetPassword}
         onBack={() => {
           setMessage('');
-          setConfirmationToken('');
-          window.history.replaceState({}, document.title, '/');
+          setResetToken('');
+
+          window.history.replaceState(
+            {},
+            document.title,
+            '/'
+          );
+
           setCurrentView('login');
         }}
       />
