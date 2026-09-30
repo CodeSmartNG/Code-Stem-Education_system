@@ -47,4 +47,17 @@ router.get('/verify/:token', verifyEmail);
 // ============================================
 router.post('/resend-verification', resendVerification);
 
+// ============================================
+// FORGOT PASSWORD
+// POST /api/auth/forgot-password
+// ============================================
+router.post('/forgot-password', forgotPassword);
+
+// ============================================
+// RESET PASSWORD
+// POST /api/auth/reset-password/:token
+// ============================================
+router.post('/reset-password/:token', resetPassword);
+
+
 module.exports = router;
