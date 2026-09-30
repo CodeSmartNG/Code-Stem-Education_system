@@ -7,7 +7,7 @@ const {
   login,
   getMe,
   verifyEmail,
-  resendVerification
+  resendVerification,
   forgotPassword,        
   resetPassword          
 } = require('../controllers/authController');
