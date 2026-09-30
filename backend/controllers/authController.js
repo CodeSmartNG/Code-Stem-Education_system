@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/sendEmail');
@@ -410,6 +411,161 @@ exports.resendVerification = async (req, res) => {
 
   } catch (error) {
     console.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+
+
+// ============================================
+// FORGOT PASSWORD
+// POST /api/auth/forgot-password
+// ============================================
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your email'
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Hash token before saving to database
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    await user.save();
+
+    // Build reset link (using the raw token, not hashed)
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    console.log('🔐 Reset link generated for:', email);
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset Your Password - STEM Platform',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Password Reset Request</h2>
+            <p>Hello ${user.name},</p>
+            <p>You requested to reset your password. Click the button below to set a new password:</p>
+            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #0ea5e9; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+              Reset Password
+            </a>
+            <p><strong>This link expires in 15 minutes.</strong></p>
+            <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+            <p style="color: #666; font-size: 12px;">
+              For security, please do not share this link with anyone.
+            </p>
+          </body>
+          </html>
+        `
+      });
+    } catch (emailError) {
+      console.error('Email send failed:', emailError.message);
+      // Reset the token if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send reset email. Please try again later.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset email sent. Please check your inbox.'
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// ============================================
+// RESET PASSWORD
+// POST /api/auth/reset-password/:token
+// ============================================
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters long'
+      });
+    }
+
+    // Hash the token to compare with stored hash
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with matching token and not expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset link. Please request a new one.'
+      });
+    }
+
+    // Set new password (will be hashed by User model's pre-save hook)
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    console.log('✅ Password reset for:', user.email);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successful! You can now log in with your new password.'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
