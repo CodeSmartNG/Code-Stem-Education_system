@@ -140,6 +140,18 @@ logout: () => {
       method: 'DELETE'
     }),
 
+
+  forgotPassword: (email) =>
+  apiCall('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  }),
+
+resetPassword: (token, password) =>
+  apiCall(`/auth/reset-password/${token}`, {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  }),
   // ============================================
   // COURSES
   // ============================================
