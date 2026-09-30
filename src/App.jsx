@@ -118,6 +118,7 @@ function App() {
   const [showConfirmationInfo, setShowConfirmationInfo] = useState(false);
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   const [initError, setInitError] = useState(null);
+  const [resetToken, setResetToken] = useState('');   // ← ADD THIS LINE
 
   // Refs for timer management
   const logoutTimerRef = useRef(null);
