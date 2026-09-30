@@ -584,66 +584,81 @@ If you did not request this password reset, ignore this email.
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token
 // ============================================
+// ============================================
+// RESET PASSWORD
+// POST /api/auth/reset-password/:token
+// ============================================
+
 exports.resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
 
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is required'
+      });
+    }
+
     if (!password) {
       return res.status(400).json({
         success: false,
-        message: "New password is required",
+        message: 'New password is required'
       });
     }
 
     if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters",
+        message: 'Password must be at least 8 characters'
       });
     }
 
     // Hash token received from URL
     const hashedToken = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(token)
-      .digest("hex");
+      .digest('hex');
 
+    // Find user with valid, non-expired reset token
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: {
-        $gt: new Date(),
-      },
-    });
+        $gt: new Date()
+      }
+    }).select('+password');
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: "Reset link is invalid or has expired",
+        message: 'Reset link is invalid or has expired'
       });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // IMPORTANT:
+    // User.js pre('save') will hash this password automatically.
+    user.password = password;
 
-    user.password = hashedPassword;
-
-    // Invalidate token after successful reset
+    // Invalidate reset token
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
 
     await user.save();
 
+    console.log('✅ Password reset successful for:', user.email);
+
     return res.status(200).json({
       success: true,
-      message: "Password reset successful. You can now login.",
+      message: 'Password reset successful. You can now login.'
     });
+
   } catch (error) {
-    console.error("Reset password error:", error);
+    console.error('❌ Reset password error:', error);
 
     return res.status(500).json({
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: 'Something went wrong. Please try again later.'
     });
   }
 };
