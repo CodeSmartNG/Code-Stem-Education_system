@@ -425,95 +425,161 @@ exports.resendVerification = async (req, res) => {
 // POST /api/auth/forgot-password
 // ============================================
 
-exports.forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide your email'
+        message: "Email is required",
       });
     }
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    // Do not reveal whether an email exists
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'No account found with this email'
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
       });
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    // Generate random token
+    const resetToken = crypto.randomBytes(32).toString("hex");
 
     // Hash token before saving to database
     const hashedToken = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(resetToken)
-      .digest('hex');
+      .digest("hex");
+
+    // Token expires in 15 minutes
+    const resetPasswordExpires = new Date(
+      Date.now() + 15 * 60 * 1000
+    );
 
     user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+    user.resetPasswordExpires = resetPasswordExpires;
 
     await user.save();
 
-    // Build reset link (using the raw token, not hashed)
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl =
+      `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    console.log('🔐 Reset link generated for:', email);
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Reset Password</title>
+      </head>
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Reset Your Password - STEM Platform',
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2>Password Reset Request</h2>
-            <p>Hello ${user.name},</p>
-            <p>You requested to reset your password. Click the button below to set a new password:</p>
-            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #0ea5e9; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+      <body style="font-family: Arial, sans-serif; background:#f5f5f5; padding:30px;">
+
+        <div style="
+          max-width:600px;
+          margin:auto;
+          background:white;
+          padding:30px;
+          border-radius:10px;
+        ">
+
+          <h2 style="color:#2563eb;">
+            CodeSmartNG STEM
+          </h2>
+
+          <h3>Password Reset Request</h3>
+
+          <p>Hello ${user.name || "Student"},</p>
+
+          <p>
+            We received a request to reset your CodeSmartNG STEM password.
+          </p>
+
+          <p>
+            Click the button below to create a new password:
+          </p>
+
+          <p>
+            <a
+              href="${resetUrl}"
+              style="
+                display:inline-block;
+                padding:12px 20px;
+                background:#2563eb;
+                color:white;
+                text-decoration:none;
+                border-radius:6px;
+              "
+            >
               Reset Password
             </a>
-            <p><strong>This link expires in 15 minutes.</strong></p>
-            <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-            <p style="color: #666; font-size: 12px;">
-              For security, please do not share this link with anyone.
-            </p>
-          </body>
-          </html>
-        `
-      });
-    } catch (emailError) {
-      console.error('Email send failed:', emailError.message);
-      // Reset the token if email fails
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save();
+          </p>
 
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send reset email. Please try again later.'
-      });
-    }
+          <p>
+            This link will expire in <strong>15 minutes</strong>.
+          </p>
 
-    res.status(200).json({
-      success: true,
-      message: 'Password reset email sent. Please check your inbox.'
+          <p>
+            If you did not request a password reset, you can safely ignore this email.
+          </p>
+
+          <hr>
+
+          <p style="color:#777;font-size:13px;">
+            CodeSmartNG STEM
+          </p>
+
+        </div>
+
+      </body>
+      </html>
+    `;
+
+    const text = `
+CodeSmartNG STEM
+
+Password Reset Request
+
+We received a request to reset your password.
+
+Open this link to reset your password:
+
+${resetUrl}
+
+This link expires in 15 minutes.
+
+If you did not request this password reset, ignore this email.
+`;
+
+    await sendEmail({
+      to: user.email,
+      subject: "CodeSmartNG STEM - Reset Your Password",
+      html,
+      text,
     });
 
+    return res.status(200).json({
+      success: true,
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
   } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({
+    console.error("Forgot password error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message || 'Server error'
+      message: "Something went wrong. Please try again later.",
     });
   }
 };
-
 // ============================================
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token
