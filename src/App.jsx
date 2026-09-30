@@ -1001,7 +1001,9 @@ case 'reset-password':
     handleTransactionUpdate,
     MessageDisplay,
     ConfirmationInfoDisplay,
-    pendingUser
+    pendingUser,
+    handleForgotPassword,
+    handleResetPassword
   ]);
 
   // ============================================
