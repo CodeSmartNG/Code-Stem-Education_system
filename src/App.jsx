@@ -583,19 +583,24 @@ const handleResetPassword = useCallback(async (token, password) => {
 
   const updateStudentData = useCallback(async (updatedStudent) => {
   try {
-    console.log('📝 updateStudentData called with:', updatedStudent);
-    console.log('   id:', updatedStudent.id);
-    console.log('   _id:', updatedStudent._id);
+    // ✅ Strip React Proxy by deep-cloning into plain JSON
+    const cleanStudent = JSON.parse(JSON.stringify(updatedStudent));
 
-    if (!updatedStudent.id && !updatedStudent._id) {
+    console.log('📝 updateStudentData called');
+    console.log('   id:', cleanStudent.id);
+    console.log('   _id:', cleanStudent._id);
+    console.log('   completedLessons:', cleanStudent.completedLessons);
+    console.log('   progress:', cleanStudent.progress);
+
+    if (!cleanStudent.id && !cleanStudent._id) {
       console.error('❌ No user ID to update');
       alert('Error: user ID missing. Please log out and log in again.');
       return;
     }
 
-    await updateStudent(updatedStudent);
+    await updateStudent(cleanStudent);
 
-    const { password, ...studentWithoutPassword } = updatedStudent;
+    const { password, ...studentWithoutPassword } = cleanStudent;
     setCurrentUserState(studentWithoutPassword);
 
     const loadedStudents = await getStudents();
