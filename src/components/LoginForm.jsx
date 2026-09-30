@@ -6,6 +6,7 @@ const LoginForm = ({
   onLogin, 
   onSwitchToRegister, 
   onSwitchToTeacherRegister, 
+  onSwitchToForgotPassword,        // ← ADD
   isLoading: parentLoading,
   onResendVerification
 }) => {
@@ -164,8 +165,8 @@ const LoginForm = ({
   };
 
   const handleForgotPassword = () => {
-    setError('Password reset functionality will be available soon. Please contact support.');
-  };
+  onSwitchToForgotPassword?.();
+};
 
   const clearError = () => {
     setError('');
