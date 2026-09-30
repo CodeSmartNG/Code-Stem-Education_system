@@ -8,6 +8,8 @@ const {
   getMe,
   verifyEmail,
   resendVerification
+  forgotPassword,        // ← ADD
+  resetPassword          // ← ADD
 } = require('../controllers/authController');
 
 const { auth } = require('../middleware/auth');
