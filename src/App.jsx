@@ -1035,28 +1035,31 @@ case 'reset-password':
         </>
       );
     }
-  }, [
-    currentUser, 
-    currentView, 
-    handleLogin, 
-    handleStudentRegister, 
-    handleTeacherRegister, 
-    handleEmailConfirmation, 
-    handleResendConfirmation, 
-    handleLogout, 
-    updateStudentData, 
-    updateCurrentUser, 
-    handleLessonPurchase, 
-    checkLessonAccess, 
-    getTeacherContactUrl,
-    handlePaymentComplete,
-    handleTransactionUpdate,
-    MessageDisplay,
-    ConfirmationInfoDisplay,
-    pendingUser,
-    handleForgotPassword,
-    handleResetPassword
-  ]);
+  }, 
+   [
+  currentUser, 
+  currentView, 
+  handleLogin, 
+  handleStudentRegister, 
+  handleTeacherRegister, 
+  handleEmailConfirmation, 
+  handleResendConfirmation, 
+  handleLogout, 
+  updateStudentData, 
+  updateCurrentUser, 
+  handleLessonPurchase, 
+  checkLessonAccess, 
+  getTeacherContactUrl,
+  handlePaymentComplete,
+  handleTransactionUpdate,
+  MessageDisplay,
+  ConfirmationInfoDisplay,
+  pendingUser,
+  resetToken,              
+  handleForgotPassword,
+  handleResetPassword
+]                              
+  );
 
   // ============================================
   // LOADING SCREEN
