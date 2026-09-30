@@ -425,7 +425,7 @@ exports.resendVerification = async (req, res) => {
 // POST /api/auth/forgot-password
 // ============================================
 
-const forgotPassword = async (req, res) => {
+exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -584,7 +584,7 @@ If you did not request this password reset, ignore this email.
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token
 // ============================================
-const resetPassword = async (req, res) => {
+exports.resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
