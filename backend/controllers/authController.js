@@ -584,57 +584,66 @@ If you did not request this password reset, ignore this email.
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token
 // ============================================
-
-exports.resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
 
-    if (!password || password.length < 8) {
+    if (!password) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 8 characters long'
+        message: "New password is required",
       });
     }
 
-    // Hash the token to compare with stored hash
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+    }
 
-    // Find user with matching token and not expired
+    // Hash token received from URL
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
-      resetPasswordExpire: { $gt: Date.now() }
+      resetPasswordExpires: {
+        $gt: new Date(),
+      },
     });
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired reset link. Please request a new one.'
+        message: "Reset link is invalid or has expired",
       });
     }
 
-    // Set new password (will be hashed by User model's pre-save hook)
-    user.password = password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    user.password = hashedPassword;
+
+    // Invalidate token after successful reset
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
 
     await user.save();
 
-    console.log('✅ Password reset for:', user.email);
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'Password reset successful! You can now log in with your new password.'
+      message: "Password reset successful. You can now login.",
     });
-
   } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({
+    console.error("Reset password error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message || 'Server error'
+      message: "Something went wrong. Please try again later.",
     });
   }
 };
