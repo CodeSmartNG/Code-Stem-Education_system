@@ -24,6 +24,10 @@ import Resources from './components/Resources';
 import Careers from './components/Careers';
 import Support from './components/Support';
 
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+import { forgotPassword, resetPassword } from './utils/storageAPI';
+
 
 // ✅ IMPORT FROM CUSTOM BACKEND API (NOT FIREBASE)
 import { 
@@ -419,6 +423,28 @@ setCurrentUserState(userWithAlias);
     }
   }, [resetInactivityTimer]);
 
+
+  const handleForgotPassword = useCallback(async (email) => {
+  try {
+    console.log('📧 Forgot password for:', email);
+    const result = await forgotPassword(email);
+    return result;
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    throw error;
+  }
+}, []);
+
+const handleResetPassword = useCallback(async (token, password) => {
+  try {
+    console.log('🔑 Resetting password with token');
+    const result = await resetPassword(token, password);
+    return result;
+  } catch (error) {
+    console.error('Reset password error:', error);
+    throw error;
+  }
+}, []);
   // ============================================
   // REGISTRATION HANDLERS
   // ============================================
