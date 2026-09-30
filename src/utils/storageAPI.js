@@ -805,6 +805,31 @@ export const getUserData = async (userId) => {
   }
 };
 
+
+//forgot password & reset 
+export const forgotPassword = async (email) => {
+  try {
+    console.log('📧 Requesting password reset for:', email);
+    const response = await api.forgotPassword(email);
+    console.log('✅ Reset email sent');
+    return response;
+  } catch (error) {
+    console.error('❌ Forgot password error:', error);
+    throw error;
+  }
+};
+
+export const resetPassword = async (token, password) => {
+  try {
+    console.log('🔑 Resetting password...');
+    const response = await api.resetPassword(token, password);
+    console.log('✅ Password reset');
+    return response;
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
+    throw error;
+  }
+};
 export const getCourseById = async (courseId) => {
   try {
     const response = await api.getCourseById(courseId);
@@ -853,6 +878,9 @@ export default {
   confirmUserEmail,
   resendEmailConfirmation,
 
+// Password reset
+forgotPassword,
+resetPassword,
   // Course Management
   getCourses,
   getAllCourses,
