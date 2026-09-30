@@ -425,130 +425,182 @@ exports.resendVerification = async (req, res) => {
 // POST /api/auth/forgot-password
 // ============================================
 
+// ============================================
+// FORGOT PASSWORD
+// POST /api/auth/forgot-password
+// ============================================
+
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    // Get and normalize email
+    const email = String(req.body?.email || '')
+      .trim()
+      .toLowerCase();
 
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: 'Email is required'
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    console.log('\n============================================');
+    console.log('🔐 FORGOT PASSWORD REQUEST');
+    console.log('📧 Email:', email);
 
+    // Find user
     const user = await User.findOne({
-      email: normalizedEmail,
+      email
     });
 
-    // Do not reveal whether an email exists
+    // IMPORTANT:
+    // Do not reveal whether the email exists.
     if (!user) {
+      console.log('ℹ️ No account found, returning generic response');
+
       return res.status(200).json({
         success: true,
         message:
-          "If an account with that email exists, a password reset link has been sent.",
+          'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
-    // Generate random token
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    // Generate secure random token
+    const resetToken = crypto
+      .randomBytes(32)
+      .toString('hex');
 
-    // Hash token before saving to database
+    // Hash token before storing in MongoDB
     const hashedToken = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(resetToken)
-      .digest("hex");
+      .digest('hex');
 
-    // Token expires in 15 minutes
+    // Token expires after 15 minutes
     const resetPasswordExpires = new Date(
       Date.now() + 15 * 60 * 1000
     );
 
+    // Save hashed token + expiration
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = resetPasswordExpires;
 
     await user.save();
 
+    console.log('✅ Reset token saved');
+    console.log('⏰ Token expires:', resetPasswordExpires);
+
+    // Frontend reset URL
+    const frontendUrl =
+      process.env.FRONTEND_URL ||
+      'http://localhost:5173';
+
     const resetUrl =
-      `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+      `${frontendUrl}/reset-password/${resetToken}`;
 
+    console.log('🔗 Reset URL:', resetUrl);
+
+    // Email HTML
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Reset Password</title>
-      </head>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Reset Password - CodeSmartNG STEM</title>
+</head>
 
-      <body style="font-family: Arial, sans-serif; background:#f5f5f5; padding:30px;">
+<body style="
+  margin:0;
+  padding:30px;
+  background:#f5f5f5;
+  font-family:Arial,sans-serif;
+">
 
-        <div style="
-          max-width:600px;
-          margin:auto;
-          background:white;
-          padding:30px;
-          border-radius:10px;
-        ">
+  <div style="
+    max-width:600px;
+    margin:0 auto;
+    background:#ffffff;
+    padding:30px;
+    border-radius:10px;
+  ">
 
-          <h2 style="color:#2563eb;">
-            CodeSmartNG STEM
-          </h2>
+    <h2 style="
+      color:#2563eb;
+      margin-top:0;
+    ">
+      CodeSmartNG STEM
+    </h2>
 
-          <h3>Password Reset Request</h3>
+    <h3>Password Reset Request</h3>
 
-          <p>Hello ${user.name || "Student"},</p>
+    <p>
+      Hello ${user.name || 'Student'},
+    </p>
 
-          <p>
-            We received a request to reset your CodeSmartNG STEM password.
-          </p>
+    <p>
+      We received a request to reset your CodeSmartNG STEM password.
+    </p>
 
-          <p>
-            Click the button below to create a new password:
-          </p>
+    <p>
+      Click the button below to create a new password:
+    </p>
 
-          <p>
-            <a
-              href="${resetUrl}"
-              style="
-                display:inline-block;
-                padding:12px 20px;
-                background:#2563eb;
-                color:white;
-                text-decoration:none;
-                border-radius:6px;
-              "
-            >
-              Reset Password
-            </a>
-          </p>
+    <p>
+      <a
+        href="${resetUrl}"
+        style="
+          display:inline-block;
+          padding:12px 20px;
+          background:#2563eb;
+          color:#ffffff;
+          text-decoration:none;
+          border-radius:6px;
+          font-weight:bold;
+        "
+      >
+        Reset Password
+      </a>
+    </p>
 
-          <p>
-            This link will expire in <strong>15 minutes</strong>.
-          </p>
+    <p>
+      This password reset link will expire in
+      <strong>15 minutes</strong>.
+    </p>
 
-          <p>
-            If you did not request a password reset, you can safely ignore this email.
-          </p>
+    <p>
+      If you did not request a password reset,
+      you can safely ignore this email.
+    </p>
 
-          <hr>
+    <hr style="
+      border:none;
+      border-top:1px solid #eeeeee;
+      margin:25px 0;
+    ">
 
-          <p style="color:#777;font-size:13px;">
-            CodeSmartNG STEM
-          </p>
+    <p style="
+      color:#777777;
+      font-size:13px;
+      margin-bottom:0;
+    ">
+      CodeSmartNG STEM
+    </p>
 
-        </div>
+  </div>
 
-      </body>
-      </html>
-    `;
+</body>
+</html>
+`;
 
+    // Plain-text email fallback
     const text = `
 CodeSmartNG STEM
 
 Password Reset Request
 
-We received a request to reset your password.
+Hello ${user.name || 'Student'},
+
+We received a request to reset your CodeSmartNG STEM password.
 
 Open this link to reset your password:
 
@@ -556,30 +608,41 @@ ${resetUrl}
 
 This link expires in 15 minutes.
 
-If you did not request this password reset, ignore this email.
+If you did not request a password reset, you can safely ignore this email.
+
+CodeSmartNG STEM
 `;
 
+    // Send email through Brevo SMTP
     await sendEmail({
       to: user.email,
-      subject: "CodeSmartNG STEM - Reset Your Password",
+      subject: 'CodeSmartNG STEM - Reset Your Password',
       html,
-      text,
+      text
     });
 
+    console.log('📧 Password reset email sent to:', user.email);
+    console.log('============================================\n');
+
+    // Always return generic response
     return res.status(200).json({
       success: true,
       message:
-        "If an account with that email exists, a password reset link has been sent.",
+        'If an account with that email exists, a password reset link has been sent.'
     });
+
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error('❌ Forgot password error:', error);
 
     return res.status(500).json({
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: 'Something went wrong. Please try again later.'
     });
   }
 };
+
+    
+
 // ============================================
 // RESET PASSWORD
 // POST /api/auth/reset-password/:token
