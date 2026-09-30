@@ -783,16 +783,20 @@ const handleResetPassword = useCallback(async (token, password) => {
               <MessageDisplay />
               <ConfirmationInfoDisplay />
               <LoginForm 
-                onLogin={handleLogin} 
-                onSwitchToRegister={() => {
-                  setMessage('');
-                  setCurrentView('register');
-                }} 
-                onSwitchToTeacherRegister={() => {
-                  setMessage('');
-                  setCurrentView('teacher-register');
-                }}
-              />
+  onLogin={handleLogin} 
+  onSwitchToRegister={() => {
+    setMessage('');
+    setCurrentView('register');
+  }} 
+  onSwitchToTeacherRegister={() => {
+    setMessage('');
+    setCurrentView('teacher-register');
+  }}
+  onSwitchToForgotPassword={() => {
+    setMessage('');
+    setCurrentView('forgot-password');
+  }}
+/>
             </div>
           );
       }
