@@ -776,6 +776,37 @@ const handleResetPassword = useCallback(async (token, password) => {
           );
         case 'setup':
           return <SetupDemo />;
+
+          case 'forgot-password':
+  return (
+    <div className="login-container">
+      <MessageDisplay />
+      <ForgotPassword
+        onBack={() => {
+          setMessage('');
+          setCurrentView('login');
+        }}
+        onForgotPassword={handleForgotPassword}
+      />
+    </div>
+  );
+
+case 'reset-password':
+  return (
+    <div className="login-container">
+      <MessageDisplay />
+      <ResetPassword
+        token={confirmationToken}
+        onResetPassword={handleResetPassword}
+        onBack={() => {
+          setMessage('');
+          setConfirmationToken('');
+          window.history.replaceState({}, document.title, '/');
+          setCurrentView('login');
+        }}
+      />
+    </div>
+  );
         case 'login':
         default:
           return (
