@@ -1,41 +1,46 @@
 // backend/utils/sendEmail.js
-const nodemailer = require('nodemailer');
+// ✅ Uses Brevo HTTP API (not SMTP) — works on Render free tier
 
 const sendEmail = async (options) => {
   try {
-    // ✅ Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
-      port: parseInt(process.env.BREVO_SMTP_PORT) || 587,
-      secure: false, // STARTTLS on port 587
-      auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_KEY
-      }
-    });
-
-    // ✅ Verify transporter (only in dev)
-    if (process.env.NODE_ENV !== 'production') {
-      await transporter.verify();
-      console.log('✅ SMTP connection verified');
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('BREVO_API_KEY is not set');
     }
 
-    const fromName = process.env.EMAIL_FROM_NAME || 'STEM Platform';
-    const fromEmail = process.env.EMAIL_FROM;
+    const senderEmail = process.env.EMAIL_FROM || 'noreply@codesmartng.com';
+    const senderName = process.env.EMAIL_FROM_NAME || 'CodeSmartNG STEM';
 
-    const mailOptions = {
-      from: `"${fromName}" <${fromEmail}>`,
-      to: options.to,
-      subject: options.subject,
-      html: options.html
-    };
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: {
+          name: senderName,
+          email: senderEmail
+        },
+        to: [
+          {
+            email: options.to
+          }
+        ],
+        subject: options.subject,
+        htmlContent: options.html
+      })
+    });
 
-    const info = await transporter.sendMail(mailOptions);
+    const data = await response.json();
 
-    console.log('✅ Email sent to:', options.to);
-    console.log('   Message ID:', info.messageId);
+    if (!response.ok) {
+      console.error('❌ Brevo API error:', data);
+      throw new Error(data.message || 'Failed to send email via Brevo');
+    }
 
-    return info;
+    console.log('✅ Email sent to:', options.to, '| Message ID:', data.messageId);
+    return data;
 
   } catch (error) {
     console.error('❌ Email error:', error.message);
