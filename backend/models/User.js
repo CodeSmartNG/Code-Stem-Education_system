@@ -52,8 +52,7 @@ resetPasswordExpires: {
   default: null,
 },
   verificationToken: String,
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
+  
   profileImage: String,
   bio: String,
   phone: String,
