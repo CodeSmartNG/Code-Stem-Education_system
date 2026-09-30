@@ -165,7 +165,11 @@ const LoginForm = ({
   };
 
   const handleForgotPassword = () => {
-  onSwitchToForgotPassword?.();
+  if (onSwitchToForgotPassword) {
+    onSwitchToForgotPassword();
+  } else {
+    setError('Password reset is not available. Please contact support.');
+  }
 };
 
   const clearError = () => {
