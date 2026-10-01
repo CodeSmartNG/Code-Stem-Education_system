@@ -11,7 +11,7 @@ import Dashboard from './pages/Dashboard';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import TeacherRegisterForm from './components/TeacherRegisterForm';
-//import EmailConfirmation from './components/EmailConfirmation';
+import EmailConfirmation from './components/EmailConfirmation';
 import DiscussionForum from './components/DiscussionForum';
 import AdminDashboard from './components/AdminDashboard';
 import TeacherDashboard from './components/TeacherDashboard';
