@@ -119,9 +119,9 @@ export const registerUser = async (userData) => {
         localStorage.setItem('user', JSON.stringify(response.user));
       }
       return {
-        user: response.user || userData,
-        confirmationToken: response.verificationToken || 'email_verification_sent'
-      };
+  user: response.user || userData,
+  confirmationToken: response.verificationToken || null
+};
     }
     throw new Error('Registration failed');
   } catch (error) {
