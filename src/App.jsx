@@ -540,22 +540,22 @@ const handleResetPassword = useCallback(async (token, password) => {
       }
 
       const result = await registerUser({
-        name,
-        email,
-        password,
-        role: 'student',
-        level: 'Beginner',
-        completedLessons: {},
-        progress: {},
-        purchasedLessons: []
-      });
+  name,
+  email,
+  password,
+  role: 'student',
+  level: 'Beginner',
+  completedLessons: {},
+  progress: {},
+  purchasedLessons: []
+});
 
-      setPendingUser(result.user);
-      setConfirmationToken(result.confirmationToken);
-      setShowConfirmationInfo(true);
-      setCurrentView('email-confirmation');
-      setMessage(`Confirmation email sent to ${email}. Please check your inbox.`);
-      return true;
+// ✅ Just remember the email for the "check your email" screen
+setPendingUser({ email });
+setShowConfirmationInfo(false);   // don't show the old demo box
+setCurrentView('email-confirmation');  // ✅ Keep this — it renders the nice screen
+setMessage(`📧 Confirmation email sent to ${email}. Please check your inbox.`);
+return true;
     } catch (error) {
       console.error('Registration error:', error);
       setMessage(error.message || 'Registration failed. Please try again.');
@@ -576,20 +576,20 @@ const handleResetPassword = useCallback(async (token, password) => {
       }
 
       const result = await registerUser({
-        ...teacherData,
-        role: 'teacher',
-        isApproved: false,
-        earnings: 0,
-        courses: [],
-        whatsappNumber: teacherData.whatsappNumber || ''
-      });
+  ...teacherData,
+  role: 'teacher',
+  isApproved: false,
+  earnings: 0,
+  courses: [],
+  whatsappNumber: teacherData.whatsappNumber || ''
+});
 
-      setPendingUser(result.user);
-      setConfirmationToken(result.confirmationToken);
-      setShowConfirmationInfo(true);
-      setCurrentView('email-confirmation');
-      setMessage(`Confirmation email sent to ${teacherData.email}. Please check your inbox.`);
-      return true;
+// ✅ Same pattern as student register
+setPendingUser({ email: teacherData.email });
+setShowConfirmationInfo(false);
+setCurrentView('email-confirmation');
+setMessage(`📧 Confirmation email sent to ${teacherData.email}. Please check your inbox.`);
+return true;
     } catch (error) {
       console.error('Teacher registration error:', error);
       setMessage(error.message || 'Teacher registration failed. Please try again.');
