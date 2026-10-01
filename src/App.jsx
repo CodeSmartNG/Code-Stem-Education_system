@@ -118,7 +118,7 @@ const [pendingUser, setPendingUser] = useState(null);
 const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 const [initError, setInitError] = useState(null);
 const [resetToken, setResetToken] = useState('');
-
+const [showConfirmationInfo, setShowConfirmationInfo] = useState(false);
 // Refs for timer management
 const logoutTimerRef = useRef(null);
 const warningTimerRef = useRef(null);
