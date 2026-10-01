@@ -269,8 +269,39 @@ function App() {
 
       setStudentsState(loadedStudents || []);
 
-      if (loadedCurrentUser) {
-        // ✅ Add uid alias for backward compatibility
+      // ✅ Detect special URLs FIRST (before any role-based redirects)
+      const path = window.location.pathname;
+      const isResetPassword = path.startsWith('/reset-password');
+      const isVerifyEmail = path.startsWith('/verify-email');
+
+      console.log('🔍 Current path:', path);
+      console.log('🔍 isResetPassword:', isResetPassword);
+      console.log('🔍 isVerifyEmail:', isVerifyEmail);
+
+      // ✅ PRIORITY 1: Special URLs always override everything
+      if (isResetPassword) {
+        console.log('🔗 Reset-password URL detected, showing reset form');
+        setCurrentView('reset-password');
+
+        // Still load user if logged in (for context), but don't change view
+        if (loadedCurrentUser) {
+          setCurrentUserState({
+            ...loadedCurrentUser,
+            uid: loadedCurrentUser.id
+          });
+        }
+      } else if (isVerifyEmail) {
+        console.log('🔗 Verify-email URL detected, showing verify view');
+        setCurrentView('verify-email');
+
+        if (loadedCurrentUser) {
+          setCurrentUserState({
+            ...loadedCurrentUser,
+            uid: loadedCurrentUser.id
+          });
+        }
+      } else if (loadedCurrentUser) {
+        // ✅ PRIORITY 2: Role-based redirect for normal navigation
         const userWithAlias = {
           ...loadedCurrentUser,
           uid: loadedCurrentUser.id
@@ -294,6 +325,7 @@ function App() {
           setCurrentView('dashboard');
         }
       } else {
+        // ✅ PRIORITY 3: Default to login
         console.log('👤 No current user, showing login');
         setCurrentView('login');
       }
