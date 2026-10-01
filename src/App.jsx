@@ -108,8 +108,7 @@ const safeObjectEntries = (obj, location = 'unknown') => {
 // ============================================
 
 function App() {
-  
-const [currentView, setCurrentView] = useState('login');
+  const [currentView, setCurrentView] = useState('login');
 const [currentUser, setCurrentUserState] = useState(null);
 const [students, setStudentsState] = useState([]);
 const [isInitialized, setIsInitialized] = useState(false);
@@ -117,8 +116,11 @@ const [message, setMessage] = useState('');
 const [pendingUser, setPendingUser] = useState(null);
 const [showInactivityWarning, setShowInactivityWarning] = useState(false);
 const [initError, setInitError] = useState(null);
+
+const [confirmationToken, setConfirmationToken] = useState('');
 const [resetToken, setResetToken] = useState('');
 const [showConfirmationInfo, setShowConfirmationInfo] = useState(false);
+
 // Refs for timer management
 const logoutTimerRef = useRef(null);
 const warningTimerRef = useRef(null);
