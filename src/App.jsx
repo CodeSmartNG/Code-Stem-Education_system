@@ -108,22 +108,20 @@ const safeObjectEntries = (obj, location = 'unknown') => {
 // ============================================
 
 function App() {
-  const [currentView, setCurrentView] = useState('login');
-  const [currentUser, setCurrentUserState] = useState(null);
-  const [students, setStudentsState] = useState([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [message, setMessage] = useState('');
-  const [pendingUser, setPendingUser] = useState(null);
-  const [confirmationToken, setConfirmationToken] = useState('');
-  const [showConfirmationInfo, setShowConfirmationInfo] = useState(false);
-  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
-  const [initError, setInitError] = useState(null);
-  const [resetToken, setResetToken] = useState('');   // ← ADD THIS LINE
+  
+const [currentView, setCurrentView] = useState('login');
+const [currentUser, setCurrentUserState] = useState(null);
+const [students, setStudentsState] = useState([]);
+const [isInitialized, setIsInitialized] = useState(false);
+const [message, setMessage] = useState('');
+const [pendingUser, setPendingUser] = useState(null);
+const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+const [initError, setInitError] = useState(null);
+const [resetToken, setResetToken] = useState('');
 
-  // Refs for timer management
-  const logoutTimerRef = useRef(null);
-  const warningTimerRef = useRef(null);
-
+// Refs for timer management
+const logoutTimerRef = useRef(null);
+const warningTimerRef = useRef(null);
   // ============================================
   // LOGOUT
   // ============================================
@@ -827,24 +825,18 @@ return true;
             </>
           );
         case 'email-confirmation':
-          return (
-            <>
-              <MessageDisplay />
-              <ConfirmationInfoDisplay />
-              <EmailConfirmation 
-                email={pendingUser?.email}
-                onConfirm={handleEmailConfirmation}
-                onResend={handleResendConfirmation}
-                onCancel={() => {
-                  setMessage('');
-                  setPendingUser(null);
-                  setConfirmationToken('');
-                  setShowConfirmationInfo(false);
-                  setCurrentView('login');
-                }}
-              />
-            </>
-          );
+  return (
+    <EmailConfirmation 
+      email={pendingUser?.email}
+      onResend={handleResendConfirmation}
+      onCancel={() => {
+        setMessage('');
+        setPendingUser(null);
+        setCurrentView('login');
+      }}
+    />
+  );
+        
         case 'setup':
           return <SetupDemo />;
 
