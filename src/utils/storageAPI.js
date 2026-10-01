@@ -175,10 +175,15 @@ export const updateStudent = async (student) => {
 
 export const confirmUserEmail = async (token) => {
   try {
+    // ✅ Reject placeholder strings
+    if (!token || token === 'email_verification_sent') {
+      throw new Error('Invalid verification link. Please check your email.');
+    }
+
     console.log('📧 Confirming email...');
     const response = await api.confirmEmail(token);
     console.log('✅ Confirm response:', response);
-    return response;   // ← Return full response, not response.user
+    return response;
   } catch (error) {
     console.error('❌ Error confirming email:', error);
     throw error;
