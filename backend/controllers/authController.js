@@ -87,11 +87,11 @@ exports.register = async (req, res) => {
     }
 
     res.status(201).json({
-      success: true,
-      message: 'Registration successful! Please check your email for verification.',
-      userId: user._id,
-      verificationToken: process.env.NODE_ENV === 'development' ? verificationToken : undefined
-    });
+  success: true,
+  message: 'Registration successful! Please check your email for verification.',
+  userId: user._id,
+  verificationToken: verificationToken  // ✅ return for testing
+});
 
   } catch (error) {
     console.error('Registration error:', error);
