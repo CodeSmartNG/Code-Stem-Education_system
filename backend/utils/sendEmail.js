@@ -19,8 +19,8 @@ const sendEmail = async (options) => {
       },
       body: JSON.stringify({
         sender: {
-          name: senderName,
-          email: senderEmail
+          name: StemEducation,
+          email: codesmartng1@gmail.com
         },
         to: [
           {
