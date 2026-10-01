@@ -739,36 +739,24 @@ const handleResetPassword = useCallback(async (token, password) => {
   }, [showInactivityWarning, resetInactivityTimer, handleLogout]);
 
   const ConfirmationInfoDisplay = useCallback(() => {
-    if (!showConfirmationInfo || !confirmationToken) return null;
+  if (!showConfirmationInfo) return null;
 
-    return (
-      <div className="confirmation-demo-display">
-        <h3>📧 Demo Email Confirmation</h3>
-        <p>Since this is a demo, here's your confirmation token:</p>
-        <div className="confirmation-token">{confirmationToken}</div>
-        <p>You can:</p>
-        <ul>
-          <li>Click the confirmation button below to simulate email confirmation</li>
-          <li>Or manually navigate to: {window.location.origin}/confirm-email?token={confirmationToken}</li>
-        </ul>
-        <div className="demo-buttons">
-          <button 
-            onClick={() => handleEmailConfirmation(confirmationToken)}
-            className="confirm-email-btn"
-          >
-            Confirm Email Now
-          </button>
-          <button 
-            onClick={() => setShowConfirmationInfo(false)}
-            className="close-info-btn"
-          >
-            Close
-          </button>
-        </div>
+  return (
+    <div className="confirmation-info-display">
+      <div style={{ textAlign: 'center', padding: '20px' }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+        <h3 style={{ marginBottom: 8 }}>Check your email</h3>
+        <p style={{ color: '#666' }}>
+          We sent a verification link to{' '}
+          <strong>{pendingUser?.email}</strong>
+        </p>
+        <p style={{ fontSize: 14, color: '#888', marginTop: 8 }}>
+          Click the link in the email to verify your account.
+        </p>
       </div>
-    );
-  }, [showConfirmationInfo, confirmationToken, handleEmailConfirmation]);
-
+    </div>
+  );
+}, [showConfirmationInfo, pendingUser]);
   const MessageDisplay = useCallback(() => {
     if (!message) return null;
 
