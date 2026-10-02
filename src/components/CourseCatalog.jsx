@@ -581,6 +581,7 @@ const completeLesson = async (courseKey, lessonId) => {
                 quiz={currentQuiz}
                 onComplete={handleQuizComplete}
                 onClose={handleCloseQuiz}
+                API_BASE={import.meta.env.VITE_API_URL || 'https://code-stem-education-system.onrender.com'}
               />
             )}
           </>
