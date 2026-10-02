@@ -22,6 +22,9 @@ const uploadRoutes = require('./routes/upload');
 const multimediaRoutes = require('./routes/multimedia');
 const quizRoutes = require('./routes/quizzes');
 
+const notificationRoutes = require('./routes/notifications');
+app.use('/api/notifications', notificationRoutes);
+
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
 
