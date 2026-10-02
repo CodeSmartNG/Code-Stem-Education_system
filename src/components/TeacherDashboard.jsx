@@ -190,10 +190,11 @@ const TeacherDashboard = () => {
         return;
       }
 
-      if (file.size > 50 * 1024 * 1024) {
-        alert('File size must be less than 50MB');
-        return;
-      }
+      // ✅ After
+if (file.size > 100 * 1024 * 1024) {
+  alert('File size must be less than 100MB');
+  return;
+}
 
       setNewMultimediaForm({
         ...newMultimediaForm,
