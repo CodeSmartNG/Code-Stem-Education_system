@@ -1293,31 +1293,35 @@ const handleAddMultimedia = async (e) => {
         {/* ============================================
             MANAGE LESSONS TAB
             ============================================ */}
-        {activeTab === 'manage-lessons' && (
-          <div className="manage-lessons-tab">
-            <h3>
-              📝 Manage Lessons
-              {selectedCourse && courses.find(c => c.id === selectedCourse) && 
-                ` - ${courses.find(c => c.id === selectedCourse)?.title}`}
-            </h3>
+        
+{/* ============================================
+    MANAGE LESSONS TAB
+    ============================================ */}
+{activeTab === 'manage-lessons' && (
+  <div className="manage-lessons-tab">
+    <h3>
+      📝 Manage Lessons
+      {selectedCourse && courses.find(c => c.id === selectedCourse) && 
+        ` - ${courses.find(c => c.id === selectedCourse)?.title}`}
+    </h3>
 
-            <div className="course-selector">
-              <label>Select Course:</label>
-              <select value={selectedCourse || ''} onChange={(e) => loadCourseLessons(e.target.value)}>
-                <option value="">Choose a course</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.id}>
-                    {course.title}
-                  </option>
-                ))}
-              </select>
-              <button className="add-lesson-btn" onClick={() => setActiveTab('add-lesson')}>
-                ➕ Add New Lesson
-              </button>
-            </div>
+    <div className="course-selector">
+      <label>Select Course:</label>
+      <select value={selectedCourse || ''} onChange={(e) => loadCourseLessons(e.target.value)}>
+        <option value="">Choose a course</option>
+        {courses.map(course => (
+          <option key={course.id} value={course.id}>
+            {course.title}
+          </option>
+        ))}
+      </select>
+      <button className="add-lesson-btn" onClick={() => setActiveTab('add-lesson')}>
+        ➕ Add New Lesson
+      </button>
+    </div>
 
-            {selectedCourse && (
-                    <div className="lessons-list">
+    {selectedCourse && (
+      <div className="lessons-list">
         {courseLessons.length === 0 ? (
           <div className="no-lessons">
             <p>No lessons in this course yet.</p>
@@ -1359,9 +1363,130 @@ const handleAddMultimedia = async (e) => {
         )}
       </div>
     )}
+
+    {/* ✅ EDIT LESSON MODAL — This is the missing piece! */}
+    {editingLesson && (
+      <div className="modal-overlay" onClick={() => setEditingLesson(null)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>✏️ Edit Lesson</h3>
+            <button
+              className="modal-close"
+              onClick={() => setEditingLesson(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleUpdateLesson} className="teacher-form">
+            <div className="form-group">
+              <label>Lesson Title *</label>
+              <input
+                type="text"
+                value={editLessonForm.title || ''}
+                onChange={(e) =>
+                  setEditLessonForm({ ...editLessonForm, title: e.target.value })
+                }
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Lesson Content *</label>
+              <textarea
+                value={editLessonForm.content || ''}
+                onChange={(e) =>
+                  setEditLessonForm({ ...editLessonForm, content: e.target.value })
+                }
+                rows="5"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Duration *</label>
+              <input
+                type="text"
+                value={editLessonForm.duration || ''}
+                onChange={(e) =>
+                  setEditLessonForm({ ...editLessonForm, duration: e.target.value })
+                }
+                placeholder="e.g., 30 minutes"
+                required
+              />
+            </div>
+
+            <div className="pricing-section">
+              <h4>💰 Lesson Pricing</h4>
+              <div className="pricing-options">
+                <label className="pricing-option">
+                  <input
+                    type="radio"
+                    name="editLessonType"
+                    checked={editLessonForm.isFree === true}
+                    onChange={() =>
+                      setEditLessonForm({ ...editLessonForm, isFree: true, price: 0 })
+                    }
+                  />
+                  <span className="option-label">🆓 Free Lesson</span>
+                </label>
+                <label className="pricing-option">
+                  <input
+                    type="radio"
+                    name="editLessonType"
+                    checked={editLessonForm.isFree === false}
+                    onChange={() =>
+                      setEditLessonForm({
+                        ...editLessonForm,
+                        isFree: false,
+                        price: editLessonForm.price || 500,
+                      })
+                    }
+                  />
+                  <span className="option-label">💰 Paid Lesson</span>
+                </label>
+              </div>
+
+              {editLessonForm.isFree === false && (
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label>Price (₦)</label>
+                  <input
+                    type="number"
+                    value={editLessonForm.price || 0}
+                    onChange={(e) =>
+                      setEditLessonForm({
+                        ...editLessonForm,
+                        price: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    min="100"
+                    max="10000"
+                    required
+                  />
+                  <small>Price between ₦100 - ₦10,000</small>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setEditingLesson(null)}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="submit-btn">
+                💾 Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
   </div>
 )}
-
 {/* ============================================
     MANAGE MULTIMEDIA TAB
     ============================================ */}
