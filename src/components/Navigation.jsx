@@ -1,6 +1,7 @@
 // components/Navigation.js
 
 import React, { useState } from 'react';
+import NotificationBell from './NotificationBell';
 import './Navigation.css';
 
 const Navigation = ({ 
@@ -130,6 +131,9 @@ const Navigation = ({
                 </button>
               </div>
             </div>
+
+            
+<NotificationBell currentUser={currentUser} setCurrentView={setCurrentView} />
           </nav>
 
           {/* Right: User Actions - Desktop */}
