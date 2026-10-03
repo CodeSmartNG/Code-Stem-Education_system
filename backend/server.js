@@ -21,26 +21,23 @@ const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const multimediaRoutes = require('./routes/multimedia');
 const quizRoutes = require('./routes/quizzes');
-
-const notificationRoutes = require('./routes/notifications');
-app.use('/api/notifications', notificationRoutes);
+const notificationRoutes = require('./routes/notifications');   // ✅ Moved up here (require is fine)
 
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
 
 // Initialize express app
-const app = express();
+const app = express();   // ✅ app must be created BEFORE app.use()
 
-// ✅ Connect to database (with proper handling)
+// ✅ Connect to database
 connectDB().catch(err => {
   console.error('❌ Failed to connect to MongoDB:', err.message);
 });
 
 // Middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow uploads
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-
 
 app.use(cors({
   origin: [
@@ -59,10 +56,10 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (uploads)
+// Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ Root route (so Render health checks pass)
+// ✅ Root route
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -87,6 +84,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/quizzes', quizRoutes);
+app.use('/api/notifications', notificationRoutes);   // ✅ Registered AFTER app is created
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -97,6 +95,7 @@ app.get('/api/health', (req, res) => {
     mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });
+
 // ✅ DEBUG: List all registered routes
 app.get('/api/debug/routes', (req, res) => {
   const routes = [];
@@ -117,12 +116,11 @@ app.get('/api/debug/routes', (req, res) => {
     });
   };
   extractRoutes(app._router.stack);
-  res.json({ 
+  res.json({
     count: routes.length,
     routes: routes.sort()
   });
 });
-
 
 // 404 handler
 app.use((req, res) => {
@@ -135,23 +133,19 @@ app.use((req, res) => {
 // Error handler
 app.use(errorHandler);
 
-// ✅ Start server — MUST bind to 0.0.0.0 for Render
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log('===========================================');
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, 'uploads')}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-
-
   console.log('✅ CORS enabled for:');
-console.log('   - http://localhost:5173');
-console.log('   - http://localhost:3000');
-console.log('   - http://127.0.0.1:5173');
-console.log('   - https://code-stem-education-system-i5dv.vercel.app');
-console.log('   - https://code-stem-education-system-one.vercel.app');
-
-
+  console.log('   - http://localhost:5173');
+  console.log('   - http://localhost:3000');
+  console.log('   - http://127.0.0.1:5173');
+  console.log('   - https://code-stem-education-system-i5dv.vercel.app');
+  console.log('   - https://code-stem-education-system-one.vercel.app');
   console.log(`✅ MongoDB: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Connecting...'}`);
   console.log('===========================================');
 });
