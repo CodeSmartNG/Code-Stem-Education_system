@@ -1,5 +1,4 @@
 // routes/courses.js
-
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { auth, isTeacher, isAdmin } = require('../middleware/auth');
@@ -9,7 +8,10 @@ const Lesson = require('../models/Lesson');
 
 const router = express.Router();
 
-// ✅ Create course (teacher only)
+// ============================================
+// CREATE COURSE (teacher only)
+// POST /api/courses
+// ============================================
 router.post('/', [
   auth,
   isTeacher,
@@ -38,7 +40,6 @@ router.post('/', [
 
     await course.save();
 
-    // Add course to teacher's courses
     await User.findByIdAndUpdate(req.user._id, {
       $push: { courses: course._id }
     });
@@ -56,10 +57,10 @@ router.post('/', [
   }
 });
 
-// ✅ Get all courses (published only for students)
-// ✅ Get all courses (published only for students)
-
-// ✅ Get all courses (published only for students)
+// ============================================
+// GET ALL COURSES
+// GET /api/courses
+// ============================================
 router.get('/', auth, async (req, res) => {
   try {
     let query = {};
@@ -69,26 +70,23 @@ router.get('/', auth, async (req, res) => {
     } else if (req.user.role === 'teacher') {
       query.teacherId = req.user._id;
     }
-    // Admins see ALL courses
 
     console.log('\n🔍 ===== GET /courses =====');
     console.log('👤 Role:', req.user.role);
-    console.log('👤 User _id:', req.user._id);
     console.log('📋 Query:', JSON.stringify(query));
 
     const courses = await Course.find(query)
       .populate('teacherId', 'name email whatsappNumber')
       .populate({
         path: 'lessonIds',
-        populate: { path: 'quizId' }   // ✅ NESTED populate — critical!
+        populate: { path: 'quizId' }
       })
       .sort({ createdAt: -1 });
 
     console.log('✅ Courses found:', courses.length);
-    console.log('📚 Titles:', courses.map(c => c.title));
     console.log('=========================\n');
 
-    // ✅ Normalize + alias quizId → quiz
+    // Normalize + alias quizId → quiz
     const normalizedCourses = courses.map(course => {
       const obj = course.toObject();
       obj.id = obj._id.toString();
@@ -102,10 +100,8 @@ router.get('/', auth, async (req, res) => {
             _id: lesson._id ? lesson._id.toString() : lesson._id
           };
 
-          // ✅ ALIAS: quizId → quiz so frontend finds lesson.quiz
           lessonObj.quiz = lesson.quizId || null;
 
-          // ✅ Also normalize multimedia array
           if (Array.isArray(lesson.multimediaIds)) {
             lessonObj.multimedia = lesson.multimediaIds;
           }
@@ -135,65 +131,17 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-
-
-
-
-// ✅ Get course by ID
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id)
-      .populate('teacherId', 'name email whatsappNumber')
-      .populate('lessonIds');
-
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
-    }
-
-    // ✅ Auto-enroll student on first access
-    if (req.user.role === 'student') {
-      // Check if already enrolled
-      const alreadyEnrolled = course.enrolledStudentIds?.some(
-        id => id.toString() === req.user._id.toString()
-      );
-
-      if (!alreadyEnrolled) {
-        course.enrolledStudentIds = course.enrolledStudentIds || [];
-        course.enrolledStudentIds.push(req.user._id);
-        course.enrolledStudents = (course.enrolledStudents || 0) + 1;
-        await course.save();
-        console.log('✅ Student auto-enrolled:', req.user._id);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: course
-    });
-  } catch (error) {
-    console.error('Get course error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-
-
-// ✅ Update course
-
-// ✅ Get course by ID
+// ============================================
+// GET SINGLE COURSE
+// GET /api/courses/:id
+// ============================================
 router.get('/:id', auth, async (req, res) => {
   try {
     const course = await Course.findById(req.params.id)
       .populate('teacherId', 'name email whatsappNumber')
       .populate({
         path: 'lessonIds',
-        populate: { path: 'quizId' }   // ✅ NESTED populate for quizzes
+        populate: { path: 'quizId' }
       });
 
     if (!course) {
@@ -203,7 +151,7 @@ router.get('/:id', auth, async (req, res) => {
       });
     }
 
-    // ✅ Auto-enroll student on first access
+    // Auto-enroll student on first access
     if (req.user.role === 'student') {
       const alreadyEnrolled = course.enrolledStudentIds?.some(
         id => id.toString() === req.user._id.toString()
@@ -218,7 +166,6 @@ router.get('/:id', auth, async (req, res) => {
       }
     }
 
-    // ✅ Normalize + alias quizId → quiz
     const courseObj = course.toObject();
     courseObj.id = courseObj._id.toString();
     courseObj._id = courseObj._id.toString();
@@ -231,10 +178,8 @@ router.get('/:id', auth, async (req, res) => {
           _id: lesson._id ? lesson._id.toString() : lesson._id
         };
 
-        // ✅ Alias quizId → quiz so frontend finds lesson.quiz
         lessonObj.quiz = lesson.quizId || null;
 
-        // ✅ Also normalize multimedia
         if (Array.isArray(lesson.multimediaIds)) {
           lessonObj.multimedia = lesson.multimediaIds;
         }
@@ -258,13 +203,14 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-
-
-// ✅ Delete course
-router.delete('/:id', [auth, isTeacher], async (req, res) => {
+// ============================================
+// UPDATE COURSE
+// PUT /api/courses/:id
+// ============================================
+router.put('/:id', [auth, isTeacher], async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -279,10 +225,48 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // Delete all lessons
+    const updatedCourse = await Course.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      data: updatedCourse
+    });
+  } catch (error) {
+    console.error('Update course error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// ============================================
+// DELETE COURSE
+// DELETE /api/courses/:id
+// ============================================
+router.delete('/:id', [auth, isTeacher], async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.id);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    if (course.teacherId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You do not own this course.'
+      });
+    }
+
     await Lesson.deleteMany({ courseId: course._id });
-    
-    // Delete course
     await course.deleteOne();
 
     res.json({
@@ -298,13 +282,16 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
   }
 });
 
-// ✅ Publish/Unpublish course
+// ============================================
+// PUBLISH/UNPUBLISH
+// PATCH /api/courses/:id/publish
+// ============================================
 router.patch('/:id/publish', [auth, isTeacher], async (req, res) => {
   try {
     const { isPublished } = req.body;
-    
+
     const course = await Course.findById(req.params.id);
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
