@@ -1,7 +1,8 @@
-// src/component/TeacherDashboard.js - Custom Backend Version
+// src/components/TeacherDashboard.jsx
+// ✅ Custom Backend Version with resilient lesson creation
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   getCurrentUser,
   getCoursesByTeacher,
   createCourse,
@@ -11,7 +12,7 @@ import {
   updateLesson,
   deleteLesson,
   addMultimedia,
-  addMultimediaToLesson,   // ← ADD THIS
+  addMultimediaToLesson,
   deleteMultimedia,
   getLessonsByCourse,
   getTeacherWallet,
@@ -22,11 +23,13 @@ import {
   getTeacherWhatsAppNumber,
   uploadFileToFirebase,
   uploadFile,
-  createQuiz               // ← ADD THIS
+  createQuiz,
 } from '../utils/storageAPI';
 import './TeacherDashboard.css';
 
-// Simple payment service stub
+// ============================================
+// SIMPLE PAYMENT SERVICE STUB
+// ============================================
 const paymentService = {
   getUserTransactions: (userId) => {
     try {
@@ -39,10 +42,12 @@ const paymentService = {
     const txs = paymentService.getUserTransactions(userId);
     txs.push(transaction);
     localStorage.setItem(`transactions_${userId}`, JSON.stringify(txs));
-  }
+  },
 };
-import './TeacherDashboard.css';
 
+// ============================================
+// TEACHER DASHBOARD
+// ============================================
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
@@ -55,21 +60,21 @@ const TeacherDashboard = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Payment-related states
+  // Payment states
   const [transactions, setTransactions] = useState([]);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('paystack');
 
-  // Course Form States
+  // Course form
   const [newCourseForm, setNewCourseForm] = useState({
     title: '',
     description: '',
     thumbnail: '📚',
-    teacherId: ''
+    teacherId: '',
   });
 
-  // Lesson Form States
+  // Lesson form
   const [newLessonForm, setNewLessonForm] = useState({
     title: '',
     content: '',
@@ -80,14 +85,14 @@ const TeacherDashboard = () => {
     videoFile: null,
     videoFileName: '',
     videoTitle: '',
-    videoDescription: ''
+    videoDescription: '',
   });
 
-  // Quiz Form States
+  // Quiz form
   const [quizForm, setQuizForm] = useState({
     title: '',
     passingScore: 70,
-    questions: []
+    questions: [],
   });
 
   const [currentQuestion, setCurrentQuestion] = useState({
@@ -95,51 +100,48 @@ const TeacherDashboard = () => {
     type: 'text',
     options: ['', '', '', ''],
     correctAnswer: 0,
-    imageUrl: ''
+    imageUrl: '',
   });
 
   const [showQuizForm, setShowQuizForm] = useState(false);
 
-  // Edit States
+  // Edit states
   const [editingCourse, setEditingCourse] = useState(null);
   const [editCourseForm, setEditCourseForm] = useState({});
   const [editingLesson, setEditingLesson] = useState(null);
   const [editLessonForm, setEditLessonForm] = useState({});
 
-  // Multimedia States
+  // Multimedia states
   const [managingMultimedia, setManagingMultimedia] = useState(null);
   const [newMultimediaForm, setNewMultimediaForm] = useState({
     type: 'video',
     file: null,
     fileName: '',
     title: '',
-    description: ''
+    description: '',
   });
 
-  // Payment & WhatsApp States
+  // Payment & WhatsApp
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [bankDetails, setBankDetails] = useState({
     bankName: '',
     accountNumber: '',
-    accountName: ''
+    accountName: '',
   });
 
   // ============================================
-  // HELPER FUNCTIONS
+  // HELPERS
   // ============================================
-
-  // ✅ Format currency
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return '₦0';
     return `₦${amount.toLocaleString() || '0'}`;
   };
 
-  // ✅ Handle file upload progress
   const simulateUploadProgress = () => {
     setUploadProgress(0);
     const interval = setInterval(() => {
-      setUploadProgress(prev => {
+      setUploadProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;
@@ -150,64 +152,68 @@ const TeacherDashboard = () => {
     return interval;
   };
 
-  // ✅ Handle video file selection
   const handleVideoFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const validTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
-      if (!validTypes.includes(file.type) && !file.type.startsWith('video/')) {
-        alert('Please select a valid video file (MP4, WebM, OGG, MOV, AVI)');
-        return;
-      }
+    if (!file) return;
 
-      if (file.size > 100 * 1024 * 1024) {
-        alert('Video file size must be less than 100MB');
-        return;
-      }
-
-      setNewLessonForm({
-        ...newLessonForm,
-        videoFile: file,
-        videoFileName: file.name
-      });
+    const validTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
+    if (!validTypes.includes(file.type) && !file.type.startsWith('video/')) {
+      alert('Please select a valid video file (MP4, WebM, OGG, MOV, AVI)');
+      return;
     }
+
+    if (file.size > 100 * 1024 * 1024) {
+      alert('Video file size must be less than 100MB');
+      return;
+    }
+
+    setNewLessonForm({
+      ...newLessonForm,
+      videoFile: file,
+      videoFileName: file.name,
+    });
   };
 
-  // ✅ Handle multimedia file selection
   const handleMultimediaFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const validTypes = {
-        video: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
-        image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-        audio: ['audio/mpeg', 'audio/ogg', 'audio/wav'],
-        document: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
-      };
+    if (!file) return;
 
-      const allowedTypes = validTypes[newMultimediaForm.type] || [];
-      if (!allowedTypes.includes(file.type) && !file.type.startsWith(newMultimediaForm.type === 'video' ? 'video/' : '')) {
-        alert(`Please select a valid ${newMultimediaForm.type} file`);
-        return;
-      }
+    const validTypes = {
+      video: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
+      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+      audio: ['audio/mpeg', 'audio/ogg', 'audio/wav'],
+      document: [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+      ],
+    };
 
-      // ✅ After
-if (file.size > 100 * 1024 * 1024) {
-  alert('File size must be less than 100MB');
-  return;
-}
-
-      setNewMultimediaForm({
-        ...newMultimediaForm,
-        file: file,
-        fileName: file.name
-      });
+    const allowedTypes = validTypes[newMultimediaForm.type] || [];
+    if (
+      !allowedTypes.includes(file.type) &&
+      !file.type.startsWith(newMultimediaForm.type === 'video' ? 'video/' : '')
+    ) {
+      alert(`Please select a valid ${newMultimediaForm.type} file`);
+      return;
     }
+
+    if (file.size > 100 * 1024 * 1024) {
+      alert('File size must be less than 100MB');
+      return;
+    }
+
+    setNewMultimediaForm({
+      ...newMultimediaForm,
+      file: file,
+      fileName: file.name,
+    });
   };
 
   // ============================================
-  // LOAD DATA FUNCTIONS
+  // LOAD DATA
   // ============================================
-
   useEffect(() => {
     loadAllData();
   }, []);
@@ -234,9 +240,9 @@ if (file.size > 100 * 1024 * 1024) {
       }
 
       const teacherCourses = await getCoursesByTeacher(currentUser.uid);
-console.log('📚 Teacher courses loaded:', teacherCourses);
-console.log('📚 Number of courses:', teacherCourses?.length);
-setCoursesState(teacherCourses || []);
+      console.log('📚 Teacher courses loaded:', teacherCourses?.length);
+      setCoursesState(teacherCourses || []);
+
       let totalLessons = 0;
       let totalStudents = 0;
 
@@ -248,8 +254,8 @@ setCoursesState(teacherCourses || []);
 
       setStats({
         totalCourses: teacherCourses.length,
-        totalLessons: totalLessons,
-        totalStudents: totalStudents
+        totalLessons,
+        totalStudents,
       });
 
       const walletData = await getTeacherWallet(currentUser.uid);
@@ -285,10 +291,8 @@ setCoursesState(teacherCourses || []);
   };
 
   // ============================================
-  // COURSE MANAGEMENT FUNCTIONS
+  // COURSE MANAGEMENT
   // ============================================
-
-  // ✅ Load lessons for a specific course
   const loadCourseLessons = async (courseId) => {
     try {
       const lessons = await getLessonsByCourse(courseId);
@@ -300,193 +304,194 @@ setCoursesState(teacherCourses || []);
     }
   };
 
-// ✅ Add Course
-const handleAddCourse = async (e) => {
-  e.preventDefault();
+  const handleAddCourse = async (e) => {
+    e.preventDefault();
 
-  if (!newCourseForm.title?.trim() || !newCourseForm.description?.trim()) {
-    alert('⚠️ Please fill in title and description');
-    return;
-  }
-
-  setIsUploading(true);
-
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      alert('Please log in first');
+    if (!newCourseForm.title?.trim() || !newCourseForm.description?.trim()) {
+      alert('⚠️ Please fill in title and description');
       return;
     }
 
-    const userId = currentUser.id || currentUser.uid;
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
+    setIsUploading(true);
 
-    const courseData = {
-      title: newCourseForm.title.trim(),
-      description: newCourseForm.description.trim(),
-      thumbnail: newCourseForm.thumbnail || '📚',
-      teacherId: userId,
-      teacherName: currentUser.name || 'Teacher',
-      enrolledStudents: 0,
-      isPublished: true
-    };
-
-    console.log('📝 Creating course:', courseData);
-
-    const result = await createCourse(courseData);
-    console.log('✅ Course created:', result);
-
-    alert('✅ Course added successfully!');
-
-    // Reset form
-    setNewCourseForm({
-      title: '',
-      description: '',
-      thumbnail: '📚',
-      teacherId: ''
-    });
-
-    // Reload courses and switch tab
-    await loadData();
-    setActiveTab('my-courses');
-
-  } catch (error) {
-    console.error('❌ Error adding course:', error);
-    alert('❌ Error adding course: ' + error.message);
-  } finally {
-    setIsUploading(false);
-  }
-};
-
-
-
-  
-// ✅ Add Lesson
-const handleAddLesson = async (e) => {
-  e.preventDefault();
-  if (!selectedCourse) {
-    alert('Please select a course first');
-    return;
-  }
-
-  setIsUploading(true);
-  setUploadProgress(0);
-
-  try {
-    const progressInterval = simulateUploadProgress();
-
-    const lessonData = {
-      title: newLessonForm.title,
-      content: newLessonForm.content,
-      duration: newLessonForm.duration,
-      isFree: newLessonForm.isFree,
-      price: newLessonForm.isFree ? 0 : newLessonForm.price,
-      order: newLessonForm.order || courseLessons.length + 1
-    };
-
-    console.log('📝 Creating lesson with:', lessonData);
-
-    const lesson = await createLesson(selectedCourse, lessonData);
-    console.log('📝 Created lesson response:', lesson);
-
-    // ✅ Safe lesson ID
-    const lessonId = lesson?.id || lesson?._id;
-    if (!lessonId) {
-      throw new Error('Lesson created but no ID returned');
-    }
-
-    // ✅ Get user safely
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.id || currentUser?.uid;
-    console.log('👤 User ID for upload:', userId);
-
-    if (newLessonForm.videoFile) {
-      if (!userId) {
-        console.warn('⚠️ No user ID for upload, skipping video');
-      } else {
-        const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
-        const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
-
-        const multimediaData = {
-          type: 'video',
-          url: downloadURL,
-          title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
-          description: newLessonForm.videoDescription || 'Video content for this lesson',
-          fileName: newLessonForm.videoFileName,
-          fileSize: newLessonForm.videoFile.size,
-          fileType: newLessonForm.videoFile.type,
-          firebasePath: filePath
-        };
-
-        await addMultimediaToLesson(lessonId, multimediaData);
-        console.log('✅ Video attached to lesson');
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        alert('Please log in first');
+        return;
       }
-    }
 
-    if (quizForm.questions.length > 0) {
-      const quizData = {
-        title: quizForm.title || 'Lesson Quiz',
-        passingScore: quizForm.passingScore,
-        questions: quizForm.questions
+      const userId = currentUser.id || currentUser.uid;
+      if (!userId) throw new Error('User ID not found');
+
+      const courseData = {
+        title: newCourseForm.title.trim(),
+        description: newCourseForm.description.trim(),
+        thumbnail: newCourseForm.thumbnail || '📚',
+        teacherId: userId,
+        teacherName: currentUser.name || 'Teacher',
+        enrolledStudents: 0,
+        isPublished: true,
       };
-      await createQuiz(lessonId, quizData);
-      console.log('✅ Quiz attached to lesson');
-    }
 
-    alert('✅ Lesson added successfully!');
-    clearInterval(progressInterval);
-    setUploadProgress(100);
+      const result = await createCourse(courseData);
+      console.log('✅ Course created:', result);
 
-    setNewLessonForm({
-      title: '',
-      content: '',
-      duration: '',
-      isFree: true,
-      price: 0,
-      order: 0,
-      videoFile: null,
-      videoFileName: '',
-      videoTitle: '',
-      videoDescription: ''
-    });
-    resetQuizForm();
+      alert('✅ Course added successfully!');
+      setNewCourseForm({ title: '', description: '', thumbnail: '📚', teacherId: '' });
 
-    await loadCourseLessons(selectedCourse);
-    setIsUploading(false);
-  } catch (error) {
-    console.error('❌ Error adding lesson:', error);
-    alert('❌ Error adding lesson: ' + error.message);
-    setIsUploading(false);
-  }
-};
-
-  // ✅ Delete Course
-  const handleDeleteCourse = async (courseId) => {
-    if (window.confirm('⚠️ Are you sure you want to delete this course?')) {
-      try {
-        await deleteCourse(courseId);
-        alert('✅ Course deleted successfully!');
-        await loadData();
-      } catch (error) {
-        alert('❌ Error deleting course: ' + error.message);
-      }
+      await loadData();
+      setActiveTab('my-courses');
+    } catch (error) {
+      console.error('❌ Error adding course:', error);
+      alert('❌ Error adding course: ' + error.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  // ✅ Publish Course
+  // ============================================
+  // ✅ FIXED — Add Lesson (resilient)
+  // ============================================
+  const handleAddLesson = async (e) => {
+    e.preventDefault();
+
+    if (!selectedCourse) {
+      alert('Please select a course first');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const progressInterval = simulateUploadProgress();
+
+    try {
+      // ---------- Step 1: Create the lesson (must succeed) ----------
+      const lessonData = {
+        title: newLessonForm.title,
+        content: newLessonForm.content,
+        duration: newLessonForm.duration,
+        isFree: newLessonForm.isFree,
+        price: newLessonForm.isFree ? 0 : newLessonForm.price,
+        order: newLessonForm.order || courseLessons.length + 1,
+      };
+
+      console.log('📝 Creating lesson with:', lessonData);
+      const lesson = await createLesson(selectedCourse, lessonData);
+      console.log('📝 Created lesson response:', lesson);
+
+      const lessonId = lesson?.id || lesson?._id;
+      if (!lessonId) {
+        throw new Error('Lesson created but no ID returned');
+      }
+
+      console.log('✅ Lesson created successfully:', lessonId);
+
+      // ---------- Step 2: Optional — upload video ----------
+      if (newLessonForm.videoFile && lessonId) {
+        try {
+          const currentUser = await getCurrentUser();
+          const userId = currentUser?.id || currentUser?.uid;
+
+          if (userId) {
+            const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
+            const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
+
+            const multimediaData = {
+              type: 'video',
+              url: downloadURL,
+              title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
+              description: newLessonForm.videoDescription || 'Video content for this lesson',
+              fileName: newLessonForm.videoFileName,
+              fileSize: newLessonForm.videoFile.size,
+              fileType: newLessonForm.videoFile.type,
+              firebasePath: filePath,
+            };
+
+            await addMultimediaToLesson(lessonId, multimediaData);
+            console.log('✅ Video attached to lesson');
+          } else {
+            console.warn('⚠️ No user ID — skipping video upload');
+          }
+        } catch (videoError) {
+          console.warn('⚠️ Video upload failed (lesson still saved):', videoError.message);
+        }
+      }
+
+      // ---------- Step 3: Optional — attach quiz ----------
+      if (quizForm.questions.length > 0 && lessonId) {
+        try {
+          const quizData = {
+            title: quizForm.title || 'Lesson Quiz',
+            passingScore: quizForm.passingScore || 70,
+            questions: quizForm.questions,
+          };
+          await createQuiz(lessonId, quizData);
+          console.log('✅ Quiz attached to lesson');
+        } catch (quizError) {
+          console.warn('⚠️ Quiz attach failed (lesson still saved):', quizError.message);
+        }
+      }
+
+      // ---------- Step 4: Success ----------
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      alert('✅ Lesson added successfully!');
+
+      // Reset form
+      setNewLessonForm({
+        title: '',
+        content: '',
+        duration: '',
+        isFree: true,
+        price: 0,
+        order: 0,
+        videoFile: null,
+        videoFileName: '',
+        videoTitle: '',
+        videoDescription: '',
+      });
+      resetQuizForm();
+
+      // Reload lessons and stay on manage-lessons tab
+      await loadCourseLessons(selectedCourse);
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error('❌ Error adding lesson:', error);
+      alert('❌ Error adding lesson: ' + error.message);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // ============================================
+  // DELETE / PUBLISH COURSE
+  // ============================================
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('⚠️ Are you sure you want to delete this course?')) return;
+
+    try {
+      await deleteCourse(courseId);
+      alert('✅ Course deleted successfully!');
+      await loadData();
+    } catch (error) {
+      alert('❌ Error deleting course: ' + error.message);
+    }
+  };
+
   const handlePublishCourse = async (courseId) => {
     try {
       await updateCourse(courseId, { isPublished: true });
-      alert('✅ Course published successfully! Students can now see it.');
+      alert('✅ Course published successfully!');
       await loadData();
     } catch (error) {
       alert('❌ Error publishing course: ' + error.message);
     }
   };
 
-  // ✅ Unpublish Course
   const handleUnpublishCourse = async (courseId) => {
     try {
       await updateCourse(courseId, { isPublished: false });
@@ -498,18 +503,14 @@ const handleAddLesson = async (e) => {
   };
 
   // ============================================
-  // LESSON MANAGEMENT FUNCTIONS
+  // LESSON UPDATE / DELETE
   // ============================================
-
-
-
-  // ✅ Update Lesson
   const handleUpdateLesson = async (e) => {
     e.preventDefault();
     try {
       const updatedData = {
         ...editLessonForm,
-        isLocked: !editLessonForm.isFree
+        isLocked: !editLessonForm.isFree,
       };
 
       await updateLesson(editingLesson.lessonId, updatedData);
@@ -522,31 +523,28 @@ const handleAddLesson = async (e) => {
     }
   };
 
-  // ✅ Delete Lesson
   const handleDeleteLesson = async (lessonId, lessonTitle) => {
-    if (window.confirm(`⚠️ Are you sure you want to delete the lesson "${lessonTitle}"?`)) {
-      try {
-        await deleteLesson(lessonId);
-        alert('✅ Lesson deleted successfully!');
-        await loadCourseLessons(selectedCourse);
-      } catch (error) {
-        alert('❌ Error deleting lesson: ' + error.message);
-      }
+    if (!window.confirm(`⚠️ Delete the lesson "${lessonTitle}"?`)) return;
+
+    try {
+      await deleteLesson(lessonId);
+      alert('✅ Lesson deleted successfully!');
+      await loadCourseLessons(selectedCourse);
+    } catch (error) {
+      alert('❌ Error deleting lesson: ' + error.message);
     }
   };
 
   // ============================================
-  // QUIZ MANAGEMENT FUNCTIONS
+  // QUIZ MANAGEMENT
   // ============================================
-
-  // ✅ Add Question to Quiz
   const handleAddQuestion = () => {
     if (!currentQuestion.question.trim()) {
       alert('Please enter a question');
       return;
     }
 
-    if (currentQuestion.options.some(opt => !opt.trim())) {
+    if (currentQuestion.options.some((opt) => !opt.trim())) {
       alert('Please fill all options');
       return;
     }
@@ -554,12 +552,12 @@ const handleAddLesson = async (e) => {
     const newQuestion = {
       id: Date.now(),
       ...currentQuestion,
-      options: [...currentQuestion.options]
+      options: [...currentQuestion.options],
     };
 
-    setQuizForm(prev => ({
+    setQuizForm((prev) => ({
       ...prev,
-      questions: [...prev.questions, newQuestion]
+      questions: [...prev.questions, newQuestion],
     }));
 
     setCurrentQuestion({
@@ -567,155 +565,125 @@ const handleAddLesson = async (e) => {
       type: 'text',
       options: ['', '', '', ''],
       correctAnswer: 0,
-      imageUrl: ''
+      imageUrl: '',
     });
   };
 
-  // ✅ Remove Question from Quiz
   const handleRemoveQuestion = (questionId) => {
-    setQuizForm(prev => ({
+    setQuizForm((prev) => ({
       ...prev,
-      questions: prev.questions.filter(q => q.id !== questionId)
+      questions: prev.questions.filter((q) => q.id !== questionId),
     }));
   };
 
-  // ✅ Handle Option Change
   const handleOptionChange = (index, value) => {
     const newOptions = [...currentQuestion.options];
     newOptions[index] = value;
-    setCurrentQuestion(prev => ({
-      ...prev,
-      options: newOptions
-    }));
+    setCurrentQuestion((prev) => ({ ...prev, options: newOptions }));
   };
 
-  // ✅ Handle Correct Answer Change
   const handleCorrectAnswerChange = (index) => {
-    setCurrentQuestion(prev => ({
-      ...prev,
-      correctAnswer: index
-    }));
+    setCurrentQuestion((prev) => ({ ...prev, correctAnswer: index }));
   };
 
-  // ✅ Reset Quiz Form
   const resetQuizForm = () => {
-    setQuizForm({
-      title: '',
-      passingScore: 70,
-      questions: []
-    });
+    setQuizForm({ title: '', passingScore: 70, questions: [] });
     setCurrentQuestion({
       question: '',
       type: 'text',
       options: ['', '', '', ''],
       correctAnswer: 0,
-      imageUrl: ''
+      imageUrl: '',
     });
     setShowQuizForm(false);
   };
 
   // ============================================
-  // MULTIMEDIA MANAGEMENT FUNCTIONS
+  // MULTIMEDIA MANAGEMENT
   // ============================================
+  const handleAddMultimedia = async (e) => {
+    e.preventDefault();
 
-// ✅ Add Multimedia
-const handleAddMultimedia = async (e) => {
-  e.preventDefault();
+    if (!newMultimediaForm.file) {
+      alert('⚠️ Please select a file first');
+      return;
+    }
 
-  // ✅ Validate file first
-  if (!newMultimediaForm.file) {
-    alert('⚠️ Please select a file first');
-    return;
-  }
+    if (!managingMultimedia?.lesson) {
+      alert('⚠️ No lesson selected');
+      return;
+    }
 
-  if (!managingMultimedia?.lesson) {
-    alert('⚠️ No lesson selected');
-    return;
-  }
-
-  setIsUploading(true);
-  setUploadProgress(0);
-
-  try {
+    setIsUploading(true);
+    setUploadProgress(0);
     const progressInterval = simulateUploadProgress();
 
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.id || currentUser?.uid;
+    try {
+      const currentUser = await getCurrentUser();
+      const userId = currentUser?.id || currentUser?.uid;
+      if (!userId) throw new Error('Please log in again');
 
-    if (!userId) {
-      throw new Error('Please log in again');
-    }
+      const filePath = `teachers/${userId}/media/${Date.now()}_${newMultimediaForm.fileName}`;
+      const fileUrl = await uploadFileToFirebase(newMultimediaForm.file, filePath);
+      if (!fileUrl) throw new Error('Upload returned no URL');
 
-    // ✅ Upload the file
-    const filePath = `teachers/${userId}/media/${Date.now()}_${newMultimediaForm.fileName}`;
-    console.log('📤 Uploading:', newMultimediaForm.file.name, 'size:', newMultimediaForm.file.size);
+      const multimediaData = {
+        type: newMultimediaForm.type || 'video',
+        url: fileUrl,
+        title: newMultimediaForm.title || newMultimediaForm.fileName || 'Untitled',
+        description: newMultimediaForm.description || '',
+        fileName: newMultimediaForm.fileName,
+        fileSize: newMultimediaForm.file.size,
+        fileType: newMultimediaForm.file.type,
+        firebasePath: filePath,
+      };
 
-    const fileUrl = await uploadFileToFirebase(newMultimediaForm.file, filePath);
-    console.log('✅ Uploaded URL:', fileUrl);
+      const lessonId = managingMultimedia.lesson.id || managingMultimedia.lesson._id;
+      await addMultimediaToLesson(lessonId, multimediaData);
+      console.log('✅ Multimedia attached to lesson');
 
-    if (!fileUrl) {
-      throw new Error('Upload returned no URL');
-    }
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      alert('✅ Multimedia content added successfully!');
 
-    const multimediaData = {
-      type: newMultimediaForm.type || 'video',
-      url: fileUrl,
-      title: newMultimediaForm.title || newMultimediaForm.fileName || 'Untitled',
-      description: newMultimediaForm.description || '',
-      fileName: newMultimediaForm.fileName,
-      fileSize: newMultimediaForm.file.size,
-      fileType: newMultimediaForm.file.type,
-      firebasePath: filePath
-    };
-
-    const lessonId = managingMultimedia.lesson.id || managingMultimedia.lesson._id;
-
-    await addMultimediaToLesson(lessonId, multimediaData);
-    console.log('✅ Multimedia attached to lesson');
-
-    clearInterval(progressInterval);
-    setUploadProgress(100);
-    alert('✅ Multimedia content added successfully!');
-
-    setNewMultimediaForm({
-      type: 'video',
-      file: null,
-      fileName: '',
-      title: '',
-      description: ''
-    });
-    await loadData();
-  } catch (error) {
-    console.error('❌ Error adding multimedia:', error);
-    alert('❌ Error adding multimedia: ' + error.message);
-  } finally {
-    setIsUploading(false);
-  }
-};
-  // ✅ Delete Multimedia
-  const handleDeleteMultimedia = async (multimediaId, multimediaTitle) => {
-    if (window.confirm(`⚠️ Are you sure you want to delete "${multimediaTitle}"?`)) {
-      try {
-        await deleteMultimedia(multimediaId);
-        alert('✅ Multimedia content deleted successfully!');
-        await loadData();
-      } catch (error) {
-        alert('❌ Error deleting multimedia: ' + error.message);
-      }
+      setNewMultimediaForm({
+        type: 'video',
+        file: null,
+        fileName: '',
+        title: '',
+        description: '',
+      });
+      await loadData();
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error('❌ Error adding multimedia:', error);
+      alert('❌ Error adding multimedia: ' + error.message);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  // ✅ Start Managing Multimedia
+  const handleDeleteMultimedia = async (multimediaId, multimediaTitle) => {
+    if (!window.confirm(`⚠️ Delete "${multimediaTitle}"?`)) return;
+
+    try {
+      await deleteMultimedia(multimediaId);
+      alert('✅ Multimedia deleted successfully!');
+      await loadData();
+    } catch (error) {
+      alert('❌ Error deleting multimedia: ' + error.message);
+    }
+  };
+
   const startManageMultimedia = (courseKey, lesson) => {
     setManagingMultimedia({ courseKey, lesson });
     setActiveTab('manage-multimedia');
   };
 
   // ============================================
-  // PAYMENT & EARNINGS FUNCTIONS
+  // PAYMENTS & WHATSAPP
   // ============================================
-
-  // ✅ Process Withdrawal
   const handleWithdrawal = async () => {
     try {
       const currentUser = await getCurrentUser();
@@ -734,10 +702,12 @@ const handleAddMultimedia = async (e) => {
         return;
       }
 
-      if (window.confirm(`⚠️ Are you sure you want to withdraw ₦${withdrawalAmount}?`)) {
+      if (
+        window.confirm(`⚠️ Are you sure you want to withdraw ₦${withdrawalAmount}?`)
+      ) {
         const updatedWallet = await withdrawFromWallet(
-          currentUser.uid, 
-          parseFloat(withdrawalAmount), 
+          currentUser.uid,
+          parseFloat(withdrawalAmount),
           bankDetails
         );
         setWallet(updatedWallet);
@@ -751,7 +721,6 @@ const handleAddMultimedia = async (e) => {
     }
   };
 
-  // ✅ Generate Payment Report
   const generatePaymentReport = async () => {
     try {
       const currentUser = await getCurrentUser();
@@ -761,7 +730,7 @@ const handleAddMultimedia = async (e) => {
       }
 
       const allTransactions = paymentService.getUserTransactions(currentUser.uid);
-      const completedTransactions = allTransactions.filter(t => t.status === 'completed');
+      const completedTransactions = allTransactions.filter((t) => t.status === 'completed');
       const totalEarnings = completedTransactions.reduce((sum, t) => sum + t.amount, 0);
 
       const report = {
@@ -769,12 +738,12 @@ const handleAddMultimedia = async (e) => {
         teacherId: currentUser.uid,
         generatedAt: new Date().toISOString(),
         totalTransactions: completedTransactions.length,
-        totalEarnings: totalEarnings,
+        totalEarnings,
         transactions: completedTransactions,
         paymentMethods: {
-          paystack: completedTransactions.filter(t => t.paymentMethod === 'paystack').length,
-          flutterwave: completedTransactions.filter(t => t.paymentMethod === 'flutterwave').length
-        }
+          paystack: completedTransactions.filter((t) => t.paymentMethod === 'paystack').length,
+          flutterwave: completedTransactions.filter((t) => t.paymentMethod === 'flutterwave').length,
+        },
       };
 
       const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
@@ -792,17 +761,11 @@ const handleAddMultimedia = async (e) => {
     }
   };
 
-  // ✅ View Transaction Details
   const viewTransactionDetails = (transaction) => {
     setSelectedTransaction(transaction);
     setShowPaymentDetails(true);
   };
 
-  // ============================================
-  // WHATSAPP FUNCTIONS
-  // ============================================
-
-  // ✅ Save WhatsApp Number
   const saveWhatsAppNumber = async () => {
     try {
       const currentUser = await getCurrentUser();
@@ -812,7 +775,7 @@ const handleAddMultimedia = async (e) => {
       }
 
       await updateTeacherProfileWithWhatsApp(currentUser.uid, {
-        whatsappNumber: whatsappNumber
+        whatsappNumber,
       });
       alert('✅ WhatsApp number saved successfully!');
       await loadTeacherProfile();
@@ -824,13 +787,16 @@ const handleAddMultimedia = async (e) => {
   // ============================================
   // RENDER
   // ============================================
-
   if (loading) {
     return <div className="loading-teacher">📚 Loading teacher dashboard...</div>;
   }
 
   if (!stats) {
-    return <div className="loading-teacher">⚠️ No teacher data found. Please make sure you're logged in as a teacher.</div>;
+    return (
+      <div className="loading-teacher">
+        ⚠️ No teacher data found. Please make sure you're logged in as a teacher.
+      </div>
+    );
   }
 
   return (
@@ -840,14 +806,10 @@ const handleAddMultimedia = async (e) => {
         <p>Manage Your Courses, Earnings, and Lessons</p>
       </div>
 
-      {/* Upload Progress Bar */}
       {isUploading && (
         <div className="upload-progress">
           <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: `${uploadProgress}%` }}
-            >
+            <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
               {uploadProgress}%
             </div>
           </div>
@@ -856,39 +818,67 @@ const handleAddMultimedia = async (e) => {
       )}
 
       <div className="teacher-tabs">
-        <button onClick={() => setActiveTab('overview')} className={activeTab === 'overview' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={activeTab === 'overview' ? 'active' : ''}
+        >
           📊 Overview
         </button>
-        <button onClick={() => { setActiveTab('my-courses'); loadData(); }} className={activeTab === 'my-courses' ? 'active' : ''}>
+        <button
+          onClick={() => {
+            setActiveTab('my-courses');
+            loadData();
+          }}
+          className={activeTab === 'my-courses' ? 'active' : ''}
+        >
           📚 My Courses ({courses.length})
         </button>
-        <button onClick={() => setActiveTab('add-course')} className={activeTab === 'add-course' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('add-course')}
+          className={activeTab === 'add-course' ? 'active' : ''}
+        >
           ➕ Add Course
         </button>
-        <button onClick={() => setActiveTab('add-lesson')} className={activeTab === 'add-lesson' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('add-lesson')}
+          className={activeTab === 'add-lesson' ? 'active' : ''}
+        >
           ➕ Add Lesson
         </button>
-        <button onClick={() => setActiveTab('manage-lessons')} className={activeTab === 'manage-lessons' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('manage-lessons')}
+          className={activeTab === 'manage-lessons' ? 'active' : ''}
+        >
           📝 Manage Lessons
         </button>
-        <button onClick={() => setActiveTab('manage-multimedia')} className={activeTab === 'manage-multimedia' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('manage-multimedia')}
+          className={activeTab === 'manage-multimedia' ? 'active' : ''}
+        >
           🎬 Manage Media
         </button>
-        <button onClick={() => setActiveTab('earnings')} className={activeTab === 'earnings' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('earnings')}
+          className={activeTab === 'earnings' ? 'active' : ''}
+        >
           💰 Earnings {wallet && `(${formatCurrency(wallet.balance)})`}
         </button>
-        <button onClick={() => setActiveTab('payments')} className={activeTab === 'payments' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={activeTab === 'payments' ? 'active' : ''}
+        >
           💳 Payments
         </button>
-        <button onClick={() => setActiveTab('whatsapp')} className={activeTab === 'whatsapp' ? 'active' : ''}>
+        <button
+          onClick={() => setActiveTab('whatsapp')}
+          className={activeTab === 'whatsapp' ? 'active' : ''}
+        >
           📱 WhatsApp
         </button>
       </div>
 
       <div className="teacher-content">
-        {/* ============================================
-            OVERVIEW TAB
-            ============================================ */}
+        {/* ============ OVERVIEW ============ */}
         {activeTab === 'overview' && (
           <div className="overview-tab">
             {wallet && (
@@ -928,9 +918,7 @@ const handleAddMultimedia = async (e) => {
           </div>
         )}
 
-        {/* ============================================
-            MY COURSES TAB
-            ============================================ */}
+        {/* ============ MY COURSES ============ */}
         {activeTab === 'my-courses' && (
           <div className="courses-tab">
             <h3>📚 My Courses</h3>
@@ -938,19 +926,24 @@ const handleAddMultimedia = async (e) => {
               {courses.length === 0 ? (
                 <div className="no-courses">
                   <p>You haven't created any courses yet.</p>
-                  <button onClick={() => setActiveTab('add-course')} className="create-course-btn">
+                  <button
+                    onClick={() => setActiveTab('add-course')}
+                    className="create-course-btn"
+                  >
                     ➕ Create Your First Course
                   </button>
                 </div>
               ) : (
-                courses.map(course => (
+                courses.map((course) => (
                   <div key={course.id} className="course-teacher-card">
                     <div className="course-header">
                       <span className="course-thumbnail">{course.thumbnail || '📚'}</span>
                       <div className="course-info">
                         <h4>{course.title}</h4>
                         <p className="course-description">{course.description}</p>
-                        <span className={`course-status ${course.isPublished ? 'published' : 'draft'}`}>
+                        <span
+                          className={`course-status ${course.isPublished ? 'published' : 'draft'}`}
+                        >
                           {course.isPublished ? '✅ Published' : '📝 Draft'}
                         </span>
                       </div>
@@ -961,19 +954,31 @@ const handleAddMultimedia = async (e) => {
                     </div>
                     <div className="course-actions">
                       {!course.isPublished && (
-                        <button className="publish-btn" onClick={() => handlePublishCourse(course.id)}>
+                        <button
+                          className="publish-btn"
+                          onClick={() => handlePublishCourse(course.id)}
+                        >
                           📢 Publish
                         </button>
                       )}
                       {course.isPublished && (
-                        <button className="unpublish-btn" onClick={() => handleUnpublishCourse(course.id)}>
+                        <button
+                          className="unpublish-btn"
+                          onClick={() => handleUnpublishCourse(course.id)}
+                        >
                           🔒 Unpublish
                         </button>
                       )}
-                      <button className="view-btn" onClick={() => loadCourseLessons(course.id)}>
+                      <button
+                        className="view-btn"
+                        onClick={() => loadCourseLessons(course.id)}
+                      >
                         📝 Manage Lessons
                       </button>
-                      <button className="delete-btn" onClick={() => handleDeleteCourse(course.id)}>
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDeleteCourse(course.id)}
+                      >
                         🗑️ Delete
                       </button>
                     </div>
@@ -984,9 +989,7 @@ const handleAddMultimedia = async (e) => {
           </div>
         )}
 
-        {/* ============================================
-            ADD COURSE TAB
-            ============================================ */}
+        {/* ============ ADD COURSE ============ */}
         {activeTab === 'add-course' && (
           <div className="add-course-tab">
             <h3>➕ Add New Course</h3>
@@ -996,7 +999,9 @@ const handleAddMultimedia = async (e) => {
                 <input
                   type="text"
                   value={newCourseForm.title}
-                  onChange={(e) => setNewCourseForm({...newCourseForm, title: e.target.value})}
+                  onChange={(e) =>
+                    setNewCourseForm({ ...newCourseForm, title: e.target.value })
+                  }
                   required
                   placeholder="e.g., Web Development Masterclass"
                 />
@@ -1005,7 +1010,9 @@ const handleAddMultimedia = async (e) => {
                 <label>Description *</label>
                 <textarea
                   value={newCourseForm.description}
-                  onChange={(e) => setNewCourseForm({...newCourseForm, description: e.target.value})}
+                  onChange={(e) =>
+                    setNewCourseForm({ ...newCourseForm, description: e.target.value })
+                  }
                   required
                   rows="4"
                   placeholder="Describe what students will learn"
@@ -1016,19 +1023,21 @@ const handleAddMultimedia = async (e) => {
                 <input
                   type="text"
                   value={newCourseForm.thumbnail}
-                  onChange={(e) => setNewCourseForm({...newCourseForm, thumbnail: e.target.value})}
+                  onChange={(e) =>
+                    setNewCourseForm({ ...newCourseForm, thumbnail: e.target.value })
+                  }
                   placeholder="🌐"
                 />
                 <small>Choose an emoji to represent your course</small>
               </div>
-              <button type="submit" className="submit-btn">➕ Create Course</button>
+              <button type="submit" className="submit-btn">
+                ➕ Create Course
+              </button>
             </form>
           </div>
         )}
 
-        {/* ============================================
-            ADD LESSON TAB
-            ============================================ */}
+        {/* ============ ADD LESSON ============ */}
         {activeTab === 'add-lesson' && (
           <div className="add-lesson-tab">
             <h3>➕ Add New Lesson</h3>
@@ -1036,7 +1045,10 @@ const handleAddMultimedia = async (e) => {
             {courses.length === 0 ? (
               <div className="no-courses-message">
                 <p>⚠️ You need to create a course first before adding lessons.</p>
-                <button onClick={() => setActiveTab('add-course')} className="create-course-btn">
+                <button
+                  onClick={() => setActiveTab('add-course')}
+                  className="create-course-btn"
+                >
                   ➕ Create a Course First
                 </button>
               </div>
@@ -1050,7 +1062,7 @@ const handleAddMultimedia = async (e) => {
                     required
                   >
                     <option value="">-- Choose a course --</option>
-                    {courses.map(course => (
+                    {courses.map((course) => (
                       <option key={course.id} value={course.id}>
                         {course.title}
                       </option>
@@ -1063,7 +1075,9 @@ const handleAddMultimedia = async (e) => {
                   <input
                     type="text"
                     value={newLessonForm.title}
-                    onChange={(e) => setNewLessonForm({...newLessonForm, title: e.target.value})}
+                    onChange={(e) =>
+                      setNewLessonForm({ ...newLessonForm, title: e.target.value })
+                    }
                     required
                     placeholder="e.g., Introduction to React"
                   />
@@ -1077,7 +1091,9 @@ const handleAddMultimedia = async (e) => {
                         type="radio"
                         name="lessonType"
                         checked={newLessonForm.isFree}
-                        onChange={() => setNewLessonForm({...newLessonForm, isFree: true, price: 0})}
+                        onChange={() =>
+                          setNewLessonForm({ ...newLessonForm, isFree: true, price: 0 })
+                        }
                       />
                       <span className="option-label">🆓 Free Lesson</span>
                       <span className="option-description">Students can access for free</span>
@@ -1087,7 +1103,9 @@ const handleAddMultimedia = async (e) => {
                         type="radio"
                         name="lessonType"
                         checked={!newLessonForm.isFree}
-                        onChange={() => setNewLessonForm({...newLessonForm, isFree: false, price: 500})}
+                        onChange={() =>
+                          setNewLessonForm({ ...newLessonForm, isFree: false, price: 500 })
+                        }
                       />
                       <span className="option-label">💰 Paid Lesson</span>
                       <span className="option-description">Students pay to access</span>
@@ -1100,7 +1118,12 @@ const handleAddMultimedia = async (e) => {
                         <input
                           type="number"
                           value={newLessonForm.price}
-                          onChange={(e) => setNewLessonForm({...newLessonForm, price: parseInt(e.target.value) || 0})}
+                          onChange={(e) =>
+                            setNewLessonForm({
+                              ...newLessonForm,
+                              price: parseInt(e.target.value) || 0,
+                            })
+                          }
                           min="100"
                           max="10000"
                           required
@@ -1115,7 +1138,9 @@ const handleAddMultimedia = async (e) => {
                   <label>Lesson Content *</label>
                   <textarea
                     value={newLessonForm.content}
-                    onChange={(e) => setNewLessonForm({...newLessonForm, content: e.target.value})}
+                    onChange={(e) =>
+                      setNewLessonForm({ ...newLessonForm, content: e.target.value })
+                    }
                     required
                     rows="4"
                     placeholder="Write the lesson content here..."
@@ -1127,7 +1152,9 @@ const handleAddMultimedia = async (e) => {
                   <input
                     type="text"
                     value={newLessonForm.duration}
-                    onChange={(e) => setNewLessonForm({...newLessonForm, duration: e.target.value})}
+                    onChange={(e) =>
+                      setNewLessonForm({ ...newLessonForm, duration: e.target.value })
+                    }
                     placeholder="30 minutes"
                     required
                   />
@@ -1158,10 +1185,14 @@ const handleAddMultimedia = async (e) => {
                   {newLessonForm.videoFile && (
                     <div className="file-preview">
                       <video controls style={{ maxWidth: '100%', maxHeight: '300px' }}>
-                        <source src={URL.createObjectURL(newLessonForm.videoFile)} type={newLessonForm.videoFile.type} />
+                        <source
+                          src={URL.createObjectURL(newLessonForm.videoFile)}
+                          type={newLessonForm.videoFile.type}
+                        />
                       </video>
                       <p className="file-details">
-                        File: {newLessonForm.videoFileName} • Size: {(newLessonForm.videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                        File: {newLessonForm.videoFileName} • Size:{' '}
+                        {(newLessonForm.videoFile.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </div>
                   )}
@@ -1170,7 +1201,11 @@ const handleAddMultimedia = async (e) => {
                 <div className="quiz-section">
                   <div className="section-header">
                     <h4>📝 Quiz Content (Optional)</h4>
-                    <button type="button" onClick={() => setShowQuizForm(!showQuizForm)} className="toggle-btn">
+                    <button
+                      type="button"
+                      onClick={() => setShowQuizForm(!showQuizForm)}
+                      className="toggle-btn"
+                    >
                       {showQuizForm ? '❌ Hide Quiz Form' : '➕ Add Quiz'}
                     </button>
                   </div>
@@ -1181,7 +1216,9 @@ const handleAddMultimedia = async (e) => {
                         <input
                           type="text"
                           value={quizForm.title}
-                          onChange={(e) => setQuizForm({...quizForm, title: e.target.value})}
+                          onChange={(e) =>
+                            setQuizForm({ ...quizForm, title: e.target.value })
+                          }
                           placeholder="Lesson Quiz"
                         />
                       </div>
@@ -1192,7 +1229,12 @@ const handleAddMultimedia = async (e) => {
                           min="0"
                           max="100"
                           value={quizForm.passingScore}
-                          onChange={(e) => setQuizForm({...quizForm, passingScore: parseInt(e.target.value) || 70})}
+                          onChange={(e) =>
+                            setQuizForm({
+                              ...quizForm,
+                              passingScore: parseInt(e.target.value) || 70,
+                            })
+                          }
                         />
                       </div>
                       <div className="current-question">
@@ -1201,7 +1243,12 @@ const handleAddMultimedia = async (e) => {
                           <label>Question Type</label>
                           <select
                             value={currentQuestion.type}
-                            onChange={(e) => setCurrentQuestion({...currentQuestion, type: e.target.value})}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                type: e.target.value,
+                              })
+                            }
                           >
                             <option value="text">📝 Text Question</option>
                             <option value="image">🖼️ Image Question</option>
@@ -1212,7 +1259,12 @@ const handleAddMultimedia = async (e) => {
                           <input
                             type="text"
                             value={currentQuestion.question}
-                            onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                question: e.target.value,
+                              })
+                            }
                             placeholder="Enter your question here"
                           />
                         </div>
@@ -1222,7 +1274,12 @@ const handleAddMultimedia = async (e) => {
                             <input
                               type="url"
                               value={currentQuestion.imageUrl}
-                              onChange={(e) => setCurrentQuestion({...currentQuestion, imageUrl: e.target.value})}
+                              onChange={(e) =>
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  imageUrl: e.target.value,
+                                })
+                              }
                               placeholder="https://example.com/image.jpg"
                             />
                           </div>
@@ -1249,7 +1306,11 @@ const handleAddMultimedia = async (e) => {
                             </div>
                           ))}
                         </div>
-                        <button type="button" onClick={handleAddQuestion} className="add-question-btn">
+                        <button
+                          type="button"
+                          onClick={handleAddQuestion}
+                          className="add-question-btn"
+                        >
                           ➕ Add Question to Quiz
                         </button>
                       </div>
@@ -1262,7 +1323,11 @@ const handleAddMultimedia = async (e) => {
                                 <strong>Q{index + 1}:</strong> {question.question}
                                 {question.type === 'image' && question.imageUrl && (
                                   <div className="question-image-preview">
-                                    <img src={question.imageUrl} alt="Question" style={{maxWidth: '100px'}} />
+                                    <img
+                                      src={question.imageUrl}
+                                      alt="Question"
+                                      style={{ maxWidth: '100px' }}
+                                    />
                                   </div>
                                 )}
                                 <div className="options-preview">
@@ -1272,7 +1337,11 @@ const handleAddMultimedia = async (e) => {
                                   Correct: Option {question.correctAnswer + 1}
                                 </div>
                               </div>
-                              <button type="button" onClick={() => handleRemoveQuestion(question.id)} className="remove-btn">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveQuestion(question.id)}
+                                className="remove-btn"
+                              >
                                 🗑️ Remove
                               </button>
                             </div>
@@ -1291,212 +1360,252 @@ const handleAddMultimedia = async (e) => {
           </div>
         )}
 
-        {/* ============================================
-            MANAGE LESSONS TAB
-            ============================================ */}
-        
-{/* ============================================
-    MANAGE LESSONS TAB
-    ============================================ */}
-{activeTab === 'manage-lessons' && (
-  <div className="manage-lessons-tab">
-    <h3>
-      📝 Manage Lessons
-      {selectedCourse && courses.find(c => c.id === selectedCourse) && 
-        ` - ${courses.find(c => c.id === selectedCourse)?.title}`}
-    </h3>
+        {/* ============ MANAGE LESSONS ============ */}
+        {activeTab === 'manage-lessons' && (
+          <div className="manage-lessons-tab">
+            <h3>
+              📝 Manage Lessons
+              {selectedCourse &&
+                courses.find((c) => c.id === selectedCourse) &&
+                ` - ${courses.find((c) => c.id === selectedCourse)?.title}`}
+            </h3>
 
-    <div className="course-selector">
-      <label>Select Course:</label>
-      <select value={selectedCourse || ''} onChange={(e) => loadCourseLessons(e.target.value)}>
-        <option value="">Choose a course</option>
-        {courses.map(course => (
-          <option key={course.id} value={course.id}>
-            {course.title}
-          </option>
-        ))}
-      </select>
-      <button className="add-lesson-btn" onClick={() => setActiveTab('add-lesson')}>
-        ➕ Add New Lesson
-      </button>
-    </div>
-
-    {selectedCourse && (
-      <div className="lessons-list">
-        {courseLessons.length === 0 ? (
-          <div className="no-lessons">
-            <p>No lessons in this course yet.</p>
-            <button onClick={() => setActiveTab('add-lesson')} className="create-lesson-btn">
-              ➕ Add Your First Lesson
-            </button>
-          </div>
-        ) : (
-          courseLessons.map(lesson => (
-            <div key={lesson.id || lesson._id} className="lesson-teacher-card">
-              <div className="lesson-info">
-                <h5>📝 {lesson.title}</h5>
-                <p><strong>Duration:</strong> ⏱️ {lesson.duration}</p>
-                <p><strong>Type:</strong> 
-                  <span className={`lesson-type ${lesson.isFree ? 'free' : 'paid'}`}>
-                    {lesson.isFree ? ' 🆓 FREE' : ` 💰 PAID - ${formatCurrency(lesson.price)}`}
-                  </span>
-                </p>
-              </div>
-              <div className="lesson-actions">
-                <button className="edit-btn" onClick={() => {
-                  setEditingLesson({ lessonId: lesson.id || lesson._id });
-                  setEditLessonForm({
-                    title: lesson.title || '',
-                    content: lesson.content || '',
-                    duration: lesson.duration || '',
-                    isFree: lesson.isFree !== undefined ? lesson.isFree : true,
-                    price: lesson.price || 0
-                  });
-                }}>
-                  ✏️ Edit
-                </button>
-                <button className="delete-btn" onClick={() => handleDeleteLesson(lesson.id || lesson._id, lesson.title)}>
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    )}
-
-    {/* ✅ EDIT LESSON MODAL — This is the missing piece! */}
-    {editingLesson && (
-      <div className="modal-overlay" onClick={() => setEditingLesson(null)}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3>✏️ Edit Lesson</h3>
-            <button
-              className="modal-close"
-              onClick={() => setEditingLesson(null)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          <form onSubmit={handleUpdateLesson} className="teacher-form">
-            <div className="form-group">
-              <label>Lesson Title *</label>
-              <input
-                type="text"
-                value={editLessonForm.title || ''}
-                onChange={(e) =>
-                  setEditLessonForm({ ...editLessonForm, title: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Lesson Content *</label>
-              <textarea
-                value={editLessonForm.content || ''}
-                onChange={(e) =>
-                  setEditLessonForm({ ...editLessonForm, content: e.target.value })
-                }
-                rows="5"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Duration *</label>
-              <input
-                type="text"
-                value={editLessonForm.duration || ''}
-                onChange={(e) =>
-                  setEditLessonForm({ ...editLessonForm, duration: e.target.value })
-                }
-                placeholder="e.g., 30 minutes"
-                required
-              />
-            </div>
-
-            <div className="pricing-section">
-              <h4>💰 Lesson Pricing</h4>
-              <div className="pricing-options">
-                <label className="pricing-option">
-                  <input
-                    type="radio"
-                    name="editLessonType"
-                    checked={editLessonForm.isFree === true}
-                    onChange={() =>
-                      setEditLessonForm({ ...editLessonForm, isFree: true, price: 0 })
-                    }
-                  />
-                  <span className="option-label">🆓 Free Lesson</span>
-                </label>
-                <label className="pricing-option">
-                  <input
-                    type="radio"
-                    name="editLessonType"
-                    checked={editLessonForm.isFree === false}
-                    onChange={() =>
-                      setEditLessonForm({
-                        ...editLessonForm,
-                        isFree: false,
-                        price: editLessonForm.price || 500,
-                      })
-                    }
-                  />
-                  <span className="option-label">💰 Paid Lesson</span>
-                </label>
-              </div>
-
-              {editLessonForm.isFree === false && (
-                <div className="form-group" style={{ marginTop: 12 }}>
-                  <label>Price (₦)</label>
-                  <input
-                    type="number"
-                    value={editLessonForm.price || 0}
-                    onChange={(e) =>
-                      setEditLessonForm({
-                        ...editLessonForm,
-                        price: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min="100"
-                    max="10000"
-                    required
-                  />
-                  <small>Price between ₦100 - ₦10,000</small>
-                </div>
-              )}
-            </div>
-
-            <div className="modal-actions">
+            <div className="course-selector">
+              <label>Select Course:</label>
+              <select
+                value={selectedCourse || ''}
+                onChange={(e) => loadCourseLessons(e.target.value)}
+              >
+                <option value="">Choose a course</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
               <button
-                type="button"
-                className="cancel-btn"
+                className="add-lesson-btn"
+                onClick={() => setActiveTab('add-lesson')}
+              >
+                ➕ Add New Lesson
+              </button>
+            </div>
+
+            {selectedCourse && (
+              <div className="lessons-list">
+                {courseLessons.length === 0 ? (
+                  <div className="no-lessons">
+                    <p>No lessons in this course yet.</p>
+                    <button
+                      onClick={() => setActiveTab('add-lesson')}
+                      className="create-lesson-btn"
+                    >
+                      ➕ Add Your First Lesson
+                    </button>
+                  </div>
+                ) : (
+                  courseLessons.map((lesson) => (
+                    <div
+                      key={lesson.id || lesson._id}
+                      className="lesson-teacher-card"
+                    >
+                      <div className="lesson-info">
+                        <h5>📝 {lesson.title}</h5>
+                        <p>
+                          <strong>Duration:</strong> ⏱️ {lesson.duration}
+                        </p>
+                        <p>
+                          <strong>Type:</strong>{' '}
+                          <span
+                            className={`lesson-type ${
+                              lesson.isFree ? 'free' : 'paid'
+                            }`}
+                          >
+                            {lesson.isFree
+                              ? ' 🆓 FREE'
+                              : ` 💰 PAID - ${formatCurrency(lesson.price)}`}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="lesson-actions">
+                        <button
+                          className="edit-btn"
+                          onClick={() => {
+                            setEditingLesson({ lessonId: lesson.id || lesson._id });
+                            setEditLessonForm({
+                              title: lesson.title || '',
+                              content: lesson.content || '',
+                              duration: lesson.duration || '',
+                              isFree:
+                                lesson.isFree !== undefined ? lesson.isFree : true,
+                              price: lesson.price || 0,
+                            });
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          className="delete-btn"
+                          onClick={() =>
+                            handleDeleteLesson(
+                              lesson.id || lesson._id,
+                              lesson.title
+                            )
+                          }
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Edit Lesson Modal */}
+            {editingLesson && (
+              <div
+                className="modal-overlay"
                 onClick={() => setEditingLesson(null)}
               >
-                Cancel
-              </button>
-              <button type="submit" className="submit-btn">
-                💾 Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-  </div>
-)}
-{/* ============================================
-    MANAGE MULTIMEDIA TAB
-    ============================================ */}
-{/* ============================================
-    MANAGE MULTIMEDIA TAB
-    ============================================ */}
-        {/* ============================================
-            MANAGE MULTIMEDIA TAB
-            ============================================ */}
+                <div
+                  className="modal-content"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="modal-header">
+                    <h3>✏️ Edit Lesson</h3>
+                    <button
+                      className="modal-close"
+                      onClick={() => setEditingLesson(null)}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleUpdateLesson} className="teacher-form">
+                    <div className="form-group">
+                      <label>Lesson Title *</label>
+                      <input
+                        type="text"
+                        value={editLessonForm.title || ''}
+                        onChange={(e) =>
+                          setEditLessonForm({
+                            ...editLessonForm,
+                            title: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Lesson Content *</label>
+                      <textarea
+                        value={editLessonForm.content || ''}
+                        onChange={(e) =>
+                          setEditLessonForm({
+                            ...editLessonForm,
+                            content: e.target.value,
+                          })
+                        }
+                        rows="5"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Duration *</label>
+                      <input
+                        type="text"
+                        value={editLessonForm.duration || ''}
+                        onChange={(e) =>
+                          setEditLessonForm({
+                            ...editLessonForm,
+                            duration: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., 30 minutes"
+                        required
+                      />
+                    </div>
+
+                    <div className="pricing-section">
+                      <h4>💰 Lesson Pricing</h4>
+                      <div className="pricing-options">
+                        <label className="pricing-option">
+                          <input
+                            type="radio"
+                            name="editLessonType"
+                            checked={editLessonForm.isFree === true}
+                            onChange={() =>
+                              setEditLessonForm({
+                                ...editLessonForm,
+                                isFree: true,
+                                price: 0,
+                              })
+                            }
+                          />
+                          <span className="option-label">🆓 Free Lesson</span>
+                        </label>
+                        <label className="pricing-option">
+                          <input
+                            type="radio"
+                            name="editLessonType"
+                            checked={editLessonForm.isFree === false}
+                            onChange={() =>
+                              setEditLessonForm({
+                                ...editLessonForm,
+                                isFree: false,
+                                price: editLessonForm.price || 500,
+                              })
+                            }
+                          />
+                          <span className="option-label">💰 Paid Lesson</span>
+                        </label>
+                      </div>
+
+                      {editLessonForm.isFree === false && (
+                        <div className="form-group" style={{ marginTop: 12 }}>
+                          <label>Price (₦)</label>
+                          <input
+                            type="number"
+                            value={editLessonForm.price || 0}
+                            onChange={(e) =>
+                              setEditLessonForm({
+                                ...editLessonForm,
+                                price: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            min="100"
+                            max="10000"
+                            required
+                          />
+                          <small>Price between ₦100 - ₦10,000</small>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="modal-actions">
+                      <button
+                        type="button"
+                        className="cancel-btn"
+                        onClick={() => setEditingLesson(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="submit-btn">
+                        💾 Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============ MANAGE MULTIMEDIA ============ */}
         {activeTab === 'manage-multimedia' && (
           <div className="manage-multimedia-tab">
             <h3>
@@ -1508,15 +1617,26 @@ const handleAddMultimedia = async (e) => {
               <div className="select-lesson-prompt">
                 <p>Select a lesson to manage its multimedia content:</p>
                 <div className="lessons-grid">
-                  {courses.map(course =>
-                    courseLessons.map(lesson => (
-                      <div key={`${course.id}-${lesson.id}`} className="lesson-select-card">
+                  {courses.map((course) =>
+                    courseLessons.map((lesson) => (
+                      <div
+                        key={`${course.id}-${lesson.id}`}
+                        className="lesson-select-card"
+                      >
                         <div className="lesson-info">
                           <strong>{lesson.title}</strong>
                           <span>Course: {course.title}</span>
-                          <span>Type: {lesson.isFree ? '🆓 FREE' : `💰 PAID - ${formatCurrency(lesson.price)}`}</span>
+                          <span>
+                            Type:{' '}
+                            {lesson.isFree
+                              ? '🆓 FREE'
+                              : `💰 PAID - ${formatCurrency(lesson.price)}`}
+                          </span>
                         </div>
-                        <button className="manage-media-btn" onClick={() => startManageMultimedia(course.id, lesson)}>
+                        <button
+                          className="manage-media-btn"
+                          onClick={() => startManageMultimedia(course.id, lesson)}
+                        >
                           🎬 Manage Media
                         </button>
                       </div>
@@ -1526,16 +1646,30 @@ const handleAddMultimedia = async (e) => {
               </div>
             ) : (
               <div className="multimedia-management">
-                <button className="back-to-lessons" onClick={() => setManagingMultimedia(null)}>
+                <button
+                  className="back-to-lessons"
+                  onClick={() => setManagingMultimedia(null)}
+                >
                   ← Back to Lessons
                 </button>
                 <h4>Managing: {managingMultimedia.lesson.title}</h4>
                 <div className="add-multimedia-form">
                   <h5>Add New Multimedia Content</h5>
-                  <form onSubmit={handleAddMultimedia} className="teacher-form compact">
+                  <form
+                    onSubmit={handleAddMultimedia}
+                    className="teacher-form compact"
+                  >
                     <div className="form-group">
                       <label>Media Type</label>
-                      <select value={newMultimediaForm.type} onChange={(e) => setNewMultimediaForm({...newMultimediaForm, type: e.target.value})}>
+                      <select
+                        value={newMultimediaForm.type}
+                        onChange={(e) =>
+                          setNewMultimediaForm({
+                            ...newMultimediaForm,
+                            type: e.target.value,
+                          })
+                        }
+                      >
                         <option value="video">🎬 Video</option>
                         <option value="image">🖼️ Image</option>
                         <option value="audio">🎵 Audio</option>
@@ -1545,24 +1679,36 @@ const handleAddMultimedia = async (e) => {
                     <div className="form-group">
                       <label>Upload File</label>
                       <div className="file-upload-wrapper">
-                        <input type="file" id="multimediaFile" onChange={handleMultimediaFileSelect} />
-                        <label htmlFor="multimediaFile" className="file-upload-label">
+                        <input
+                          type="file"
+                          id="multimediaFile"
+                          onChange={handleMultimediaFileSelect}
+                        />
+                        <label
+                          htmlFor="multimediaFile"
+                          className="file-upload-label"
+                        >
                           <span className="upload-icon">📤</span>
                           {newMultimediaForm.fileName || 'Choose file'}
                         </label>
                       </div>
-                      <small>Max file size: 50MB</small>
+                      <small>Max file size: 100MB</small>
                     </div>
-                    <button type="submit" className="submit-btn" disabled={isUploading}>
+                    <button
+                      type="submit"
+                      className="submit-btn"
+                      disabled={isUploading}
+                    >
                       {isUploading ? '📤 Uploading...' : '➕ Add Media'}
                     </button>
                   </form>
                 </div>
                 <div className="existing-multimedia">
                   <h5>Existing Media Content</h5>
-                  {managingMultimedia.lesson.multimedia && managingMultimedia.lesson.multimedia.length > 0 ? (
+                  {managingMultimedia.lesson.multimedia &&
+                  managingMultimedia.lesson.multimedia.length > 0 ? (
                     <div className="multimedia-list">
-                      {managingMultimedia.lesson.multimedia.map(media => (
+                      {managingMultimedia.lesson.multimedia.map((media) => (
                         <div key={media.id} className="media-item">
                           <span className="media-icon">
                             {media.type === 'video' && '🎬'}
@@ -1571,7 +1717,12 @@ const handleAddMultimedia = async (e) => {
                             {media.type === 'document' && '📄'}
                           </span>
                           <span>{media.title}</span>
-                          <button className="delete-btn" onClick={() => handleDeleteMultimedia(media.id, media.title)}>
+                          <button
+                            className="delete-btn"
+                            onClick={() =>
+                              handleDeleteMultimedia(media.id, media.title)
+                            }
+                          >
                             🗑️
                           </button>
                         </div>
@@ -1586,9 +1737,7 @@ const handleAddMultimedia = async (e) => {
           </div>
         )}
 
-        {/* ============================================
-            EARNINGS TAB
-            ============================================ */}
+        {/* ============ EARNINGS ============ */}
         {activeTab === 'earnings' && (
           <div className="earnings-tab">
             <h3>💰 Earnings & Withdrawals</h3>
@@ -1596,9 +1745,13 @@ const handleAddMultimedia = async (e) => {
               <div className="earnings-content">
                 <div className="balance-card">
                   <h4>Available Balance</h4>
-                  <div className="balance-amount">{formatCurrency(wallet.balance)}</div>
+                  <div className="balance-amount">
+                    {formatCurrency(wallet.balance)}
+                  </div>
                   <p>Total Earnings: {formatCurrency(wallet.totalEarnings)}</p>
-                  <p>Pending Withdrawals: {formatCurrency(wallet.pendingWithdrawals)}</p>
+                  <p>
+                    Pending Withdrawals: {formatCurrency(wallet.pendingWithdrawals)}
+                  </p>
                 </div>
 
                 <div className="payment-methods-section">
@@ -1608,8 +1761,12 @@ const handleAddMultimedia = async (e) => {
                       <div className="method-icon">🏦</div>
                       <h5>Paystack</h5>
                       <p>Cards, Bank Transfer, USSD</p>
-                      <button className={`select-method-btn ${paymentMethod === 'paystack' ? 'selected' : ''}`}
-                        onClick={() => setPaymentMethod('paystack')}>
+                      <button
+                        className={`select-method-btn ${
+                          paymentMethod === 'paystack' ? 'selected' : ''
+                        }`}
+                        onClick={() => setPaymentMethod('paystack')}
+                      >
                         {paymentMethod === 'paystack' ? '✓ Selected' : 'Select'}
                       </button>
                     </div>
@@ -1617,8 +1774,12 @@ const handleAddMultimedia = async (e) => {
                       <div className="method-icon">🌊</div>
                       <h5>Flutterwave</h5>
                       <p>Cards, Bank, Mobile Money</p>
-                      <button className={`select-method-btn ${paymentMethod === 'flutterwave' ? 'selected' : ''}`}
-                        onClick={() => setPaymentMethod('flutterwave')}>
+                      <button
+                        className={`select-method-btn ${
+                          paymentMethod === 'flutterwave' ? 'selected' : ''
+                        }`}
+                        onClick={() => setPaymentMethod('flutterwave')}
+                      >
                         {paymentMethod === 'flutterwave' ? '✓ Selected' : 'Select'}
                       </button>
                     </div>
@@ -1630,31 +1791,62 @@ const handleAddMultimedia = async (e) => {
                   <div className="withdrawal-form">
                     <div className="form-group">
                       <label>Amount to Withdraw (₦)</label>
-                      <input type="number" value={withdrawalAmount}
+                      <input
+                        type="number"
+                        value={withdrawalAmount}
                         onChange={(e) => setWithdrawalAmount(e.target.value)}
-                        placeholder="Enter amount" min="100" max={wallet.balance} />
+                        placeholder="Enter amount"
+                        min="100"
+                        max={wallet.balance}
+                      />
                       <small>Minimum withdrawal: ₦100</small>
                     </div>
                     <div className="form-group">
                       <label>Bank Name</label>
-                      <input type="text" value={bankDetails.bankName}
-                        onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
-                        placeholder="e.g., GTBank, Zenith Bank" />
+                      <input
+                        type="text"
+                        value={bankDetails.bankName}
+                        onChange={(e) =>
+                          setBankDetails({ ...bankDetails, bankName: e.target.value })
+                        }
+                        placeholder="e.g., GTBank, Zenith Bank"
+                      />
                     </div>
                     <div className="form-group">
                       <label>Account Number</label>
-                      <input type="text" value={bankDetails.accountNumber}
-                        onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
-                        placeholder="10-digit account number" />
+                      <input
+                        type="text"
+                        value={bankDetails.accountNumber}
+                        onChange={(e) =>
+                          setBankDetails({
+                            ...bankDetails,
+                            accountNumber: e.target.value,
+                          })
+                        }
+                        placeholder="10-digit account number"
+                      />
                     </div>
                     <div className="form-group">
                       <label>Account Name</label>
-                      <input type="text" value={bankDetails.accountName}
-                        onChange={(e) => setBankDetails({...bankDetails, accountName: e.target.value})}
-                        placeholder="Name as it appears on bank account" />
+                      <input
+                        type="text"
+                        value={bankDetails.accountName}
+                        onChange={(e) =>
+                          setBankDetails({
+                            ...bankDetails,
+                            accountName: e.target.value,
+                          })
+                        }
+                        placeholder="Name as it appears on bank account"
+                      />
                     </div>
-                    <button onClick={handleWithdrawal} disabled={!withdrawalAmount || withdrawalAmount > wallet.balance}
-                      className="withdraw-btn">
+                    <button
+                      onClick={handleWithdrawal}
+                      disabled={
+                        !withdrawalAmount || withdrawalAmount > wallet.balance
+                      }
+                      className="withdraw-btn"
+                    >
                       Request Withdrawal
                     </button>
                   </div>
@@ -1666,9 +1858,7 @@ const handleAddMultimedia = async (e) => {
           </div>
         )}
 
-        {/* ============================================
-            PAYMENTS TAB
-            ============================================ */}
+        {/* ============ PAYMENTS ============ */}
         {activeTab === 'payments' && (
           <div className="payments-tab">
             <h3>💳 Payment History & Reports</h3>
@@ -1676,7 +1866,10 @@ const handleAddMultimedia = async (e) => {
               <button onClick={generatePaymentReport} className="report-btn">
                 📊 Generate Payment Report
               </button>
-              <button onClick={() => setActiveTab('earnings')} className="earnings-btn">
+              <button
+                onClick={() => setActiveTab('earnings')}
+                className="earnings-btn"
+              >
                 💰 View Earnings
               </button>
             </div>
@@ -1684,29 +1877,30 @@ const handleAddMultimedia = async (e) => {
               <div className="summary-card">
                 <h4>Total Transactions</h4>
                 <div className="summary-number">
-                  {transactions.filter(t => t.status === 'completed').length}
+                  {transactions.filter((t) => t.status === 'completed').length}
                 </div>
               </div>
               <div className="summary-card">
                 <h4>Total Earned</h4>
                 <div className="summary-number">
-                  {formatCurrency(transactions.filter(t => t.status === 'completed')
-                    .reduce((sum, t) => sum + (t.amount || 0), 0))}
+                  {formatCurrency(
+                    transactions
+                      .filter((t) => t.status === 'completed')
+                      .reduce((sum, t) => sum + (t.amount || 0), 0)
+                  )}
                 </div>
               </div>
               <div className="summary-card">
                 <h4>Pending Payments</h4>
                 <div className="summary-number">
-                  {transactions.filter(t => t.status === 'pending').length}
+                  {transactions.filter((t) => t.status === 'pending').length}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ============================================
-            WHATSAPP TAB
-            ============================================ */}
+        {/* ============ WHATSAPP ============ */}
         {activeTab === 'whatsapp' && (
           <div className="whatsapp-tab">
             <h3>📱 WhatsApp Contact</h3>
@@ -1714,9 +1908,12 @@ const handleAddMultimedia = async (e) => {
             <div className="whatsapp-form">
               <div className="form-group">
                 <label>WhatsApp Phone Number</label>
-                <input type="tel" value={whatsappNumber}
+                <input
+                  type="tel"
+                  value={whatsappNumber}
                   onChange={(e) => setWhatsappNumber(e.target.value)}
-                  placeholder="e.g., 2348012345678" />
+                  placeholder="e.g., 2348012345678"
+                />
                 <small>Include country code without + sign</small>
               </div>
               <button onClick={saveWhatsAppNumber} className="save-btn">
@@ -1726,8 +1923,12 @@ const handleAddMultimedia = async (e) => {
                 <div className="whatsapp-preview">
                   <h4>Your WhatsApp Contact Link:</h4>
                   <div className="whatsapp-link">
-                    <a href={getTeacherWhatsAppUrl(teacherProfile.uid)} target="_blank" rel="noopener noreferrer"
-                      className="whatsapp-btn">
+                    <a
+                      href={getTeacherWhatsAppUrl(teacherProfile.uid)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whatsapp-btn"
+                    >
                       💬 Chat on WhatsApp
                     </a>
                   </div>
