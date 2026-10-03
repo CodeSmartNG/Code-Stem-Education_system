@@ -647,7 +647,22 @@
 .start-quiz-btn:hover {
   background: #166fe5;
 }
+.review-btn {
+  background: #42b72a;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
 
+.review-btn:hover:not(:disabled) {
+  background: #369922;
+}
 /* ============================================
    ✅ MOBILE RESPONSIVE
    ============================================ */
