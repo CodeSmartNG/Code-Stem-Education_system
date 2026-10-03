@@ -503,126 +503,154 @@ const completeLesson = async (courseKey, lessonId) => {
     const hasAccess = currentUser ? canAccessLesson(currentUser.id, selectedCourse, lesson.id) : false;
 
     return (
-      <div className="course-lesson">
-        <button onClick={() => setSelectedCourse(null)} className="back-btn">
-          ← Back to Courses
-        </button>
+  <div className="course-lesson">
+    <button onClick={() => setSelectedCourse(null)} className="back-btn">
+      ← Back to Courses
+    </button>
 
-        <div className="lesson-header">
-          <h2>{lesson.title || 'Untitled Lesson'}</h2>
-          {isCompleted && <span className="completion-badge">Completed ✓</span>}
-          {!lesson.isFree && (
-            <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
-              {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
-            </span>
-          )}
-        </div>
+    <div className="lesson-header">
+      <h2>{lesson.title || 'Untitled Lesson'}</h2>
+      {isCompleted && <span className="completion-badge">Completed ✓</span>}
+      {!lesson.isFree && (
+        <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
+          {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
+        </span>
+      )}
+    </div>
 
-        {course.teacherName && (
-          <div className="teacher-info">
-            <strong>Instructor:</strong> {course.teacherName}
-            {course.teacherId && getTeacherContactUrl(course.teacherId) && (
-              <a 
-                href={getTeacherContactUrl(course.teacherId)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="whatsapp-contact-btn"
-              >
-                💬 Chat on WhatsApp
-              </a>
-            )}
-          </div>
+    {course.teacherName && (
+      <div className="teacher-info">
+        <strong>Instructor:</strong> {course.teacherName}
+        {course.teacherId && getTeacherContactUrl(course.teacherId) && (
+          <a 
+            href={getTeacherContactUrl(course.teacherId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whatsapp-contact-btn"
+          >
+            💬 Chat on WhatsApp
+          </a>
         )}
-
-        {!hasAccess && !lesson.isFree ? (
-          <div className="payment-required">
-            <div className="payment-prompt">
-              <h3>🔒 Premium Content</h3>
-              <p>This lesson requires payment to access the content.</p>
-              <div className="price-display">₦{lesson.price}</div>
-              <button 
-                onClick={() => handlePurchaseLesson(selectedCourse, currentLesson)}
-                className="purchase-access-btn"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Processing...' : 'Purchase Access'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {lessonMultimedia && lessonMultimedia.length > 0 && (
-              <div className="multimedia-container">
-                <h3>📹 Lesson Materials</h3>
-                <MultimediaViewer multimedia={lessonMultimedia} />
-              </div>
-            )}
-
-            <div className="lesson-content">
-              <p>{lesson.content}</p>
-              <p><strong>Duration:</strong> {lesson.duration}</p>
-            </div>
-
-            {lesson.quiz && !showQuiz && (
-  <div className="quiz-section">
-    <h3>Knowledge Test</h3>
-    {isCompleted ? (
-      <>
-        <p style={{ color: '#42b72a', fontWeight: 600 }}>
-          ✅ You have already passed this quiz.
-        </p>
-        <p style={{ color: '#65676b', fontSize: 13 }}>
-          Quiz can only be taken once. You can watch the video again anytime.
-        </p>
-      </>
-    ) : (
-      <>
-        <p>Test your knowledge about this lesson:</p>
-        <button 
-          onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
-          className="start-quiz-btn"
-        >
-          Start Quiz
-        </button>
-      </>
+      </div>
     )}
-  </div>
-)}
 
-            {showQuiz && currentQuiz && (
-              <Quiz 
-                quiz={currentQuiz}
-                onComplete={handleQuizComplete}
-                onClose={handleCloseQuiz}
-                API_BASE={import.meta.env.VITE_API_URL || 'https://code-stem-education-system.onrender.com'}
-              />
-            )}
-          </>
-        )}
-
-        <div className="lesson-navigation">
-          {currentLesson > 0 && (
-            <button onClick={() => setCurrentLesson(currentLesson - 1)}>
-              ← Previous Lesson
-            </button>
-          )}
-
-<button 
-  onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
-  className="complete-btn"
-  disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
->
-  {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
-</button>
-          {currentLesson < (course.lessons?.length || 0) - 1 && (
-            <button onClick={() => setCurrentLesson(currentLesson + 1)}>
-              Next Lesson →
-            </button>
-          )}
+    {!hasAccess && !lesson.isFree ? (
+      <div className="payment-required">
+        <div className="payment-prompt">
+          <h3>🔒 Premium Content</h3>
+          <p>This lesson requires payment to access the content.</p>
+          <div className="price-display">₦{lesson.price}</div>
+          <button 
+            onClick={() => handlePurchaseLesson(selectedCourse, currentLesson)}
+            className="purchase-access-btn"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Processing...' : 'Purchase Access'}
+          </button>
         </div>
       </div>
-    );
-  }
+    ) : (
+      <>
+        {lessonMultimedia && lessonMultimedia.length > 0 && (
+          <div className="multimedia-container">
+            <h3>📹 Lesson Materials</h3>
+            <MultimediaViewer multimedia={lessonMultimedia} />
+          </div>
+        )}
+
+        <div className="lesson-content">
+          <p>{lesson.content}</p>
+          <p><strong>Duration:</strong> {lesson.duration}</p>
+        </div>
+
+        {/* ✅ Quiz — disabled if already completed */}
+        {lesson.quiz && !showQuiz && (
+          <div className="quiz-section">
+            <h3>Knowledge Test</h3>
+            {isCompleted ? (
+              <>
+                <p style={{ color: '#42b72a', fontWeight: 600 }}>
+                  ✅ You have already passed this quiz.
+                </p>
+                <p style={{ color: '#65676b', fontSize: 13 }}>
+                  Quiz can only be taken once. You can watch the video again anytime.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>Test your knowledge about this lesson:</p>
+                <button 
+                  onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
+                  className="start-quiz-btn"
+                >
+                  Start Quiz
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {showQuiz && currentQuiz && (
+          <Quiz 
+            quiz={currentQuiz}
+            onComplete={handleQuizComplete}
+            onClose={handleCloseQuiz}
+            API_BASE={import.meta.env.VITE_API_URL || 'https://code-stem-education-system.onrender.com'}
+          />
+        )}
+      </>
+    )}
+
+    {/* ✅ FIXED: Navigation with multimedia reload */}
+    <div className="lesson-navigation">
+      {currentLesson > 0 && (
+        <button 
+          onClick={async () => {
+            const newIndex = currentLesson - 1;
+            const newLesson = course.lessons[newIndex];
+            setCurrentLesson(newIndex);
+            setShowQuiz(false);
+            if (newLesson?.id) {
+              await loadLessonMultimedia(selectedCourse, newLesson.id);
+            }
+            window.scrollTo(0, 0);
+          }}
+        >
+          ← Previous Lesson
+        </button>
+      )}
+
+      <button 
+        onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
+        className="complete-btn"
+        disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
+      >
+        {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
+      </button>
+
+      {currentLesson < (course.lessons?.length || 0) - 1 && (
+        <button 
+          onClick={async () => {
+            const newIndex = currentLesson + 1;
+            const newLesson = course.lessons[newIndex];
+            setCurrentLesson(newIndex);
+            setShowQuiz(false);
+            if (newLesson?.id) {
+              await loadLessonMultimedia(selectedCourse, newLesson.id);
+            }
+            window.scrollTo(0, 0);
+          }}
+        >
+          Next Lesson →
+        </button>
+      )}
+    </div>
+  </div>
+);
+    
+
+
+                
 
   // Main course catalog view
   return (
