@@ -259,4 +259,77 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
   }
 });
 
+
+
+
+// ============================================
+// CREATE/ATTACH QUIZ to a lesson
+// POST /api/lessons/:id/quiz
+// ============================================
+router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
+  try {
+    console.log('\n📝 ===== ATTACH QUIZ =====');
+    console.log('👤 Teacher:', req.user?._id);
+    console.log('📥 Lesson ID:', req.params.id);
+    console.log('📥 Quiz payload:', JSON.stringify(req.body, null, 2));
+
+    // ✅ Validate lesson ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lesson ID format'
+      });
+    }
+
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        message: 'Lesson not found'
+      });
+    }
+
+    // ✅ Validate quiz payload
+    const { title, passingScore, questions } = req.body;
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quiz must have at least one question'
+      });
+    }
+
+    // ✅ Create the Quiz document
+    const Quiz = require('../models/Quiz');
+    const quiz = await Quiz.create({
+      lessonId: lesson._id,
+      courseId: lesson.courseId,
+      title: title || 'Lesson Quiz',
+      passingScore: passingScore || 70,
+      questions: questions
+    });
+
+    console.log('✅ Quiz created:', quiz._id);
+
+    // ✅ Attach quiz to lesson
+    lesson.quizId = quiz._id;
+    lesson.updatedAt = new Date();
+    await lesson.save();
+
+    console.log('✅ Quiz attached to lesson:', lesson._id);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Quiz attached to lesson successfully',
+      quiz: quiz,
+      data: quiz
+    });
+
+  } catch (error) {
+    console.error('❌ Attach quiz error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 module.exports = router;
