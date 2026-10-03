@@ -861,6 +861,39 @@ export const getPlatformEarnings = async () => ({
 });
 export const getTeacherTransactions = async () => [];
 export const getAllTransactions = async () => [];
+
+//Notifications 
+export const getNotifications = async () => {
+  const res = await fetch(`${API_BASE}/api/notifications`, {
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch notifications');
+  return res.json();
+};
+
+export const getUnreadCount = async () => {
+  const res = await fetch(`${API_BASE}/api/notifications/unread-count`, {
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  });
+  if (!res.ok) return { count: 0 };
+  return res.json();
+};
+
+export const markNotificationRead = async (id) => {
+  const res = await fetch(`${API_BASE}/api/notifications/${id}/read`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  });
+  return res.json();
+};
+
+export const markAllNotificationsRead = async () => {
+  const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  });
+  return res.json();
+};
 // ============================================
 // DEFAULT EXPORT
 // ============================================

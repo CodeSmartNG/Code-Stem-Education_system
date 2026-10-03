@@ -1,6 +1,7 @@
-// components/Navigation.js
+// src/components/Navigation.jsx
 
 import React, { useState } from 'react';
+import NotificationBell from './NotificationBell';
 import './Navigation.css';
 
 const Navigation = ({ 
@@ -15,13 +16,12 @@ const Navigation = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-  // ✅ Check role directly from currentUser (fallback to props)
+  // Role detection (fallback to props if currentUser is missing)
   const userRole = currentUser?.role || 'student';
   const isAdminUser = userRole === 'admin' || isAdmin;
   const isTeacherUser = userRole === 'teacher' || isTeacher;
   const isStudentUser = userRole === 'student';
 
-  // Handle navigation clicks
   const handleNavClick = (view) => {
     setCurrentView(view);
     setIsMobileMenuOpen(false);
@@ -82,28 +82,16 @@ const Navigation = ({
               </button>
               {showMoreLinks && (
                 <div className="dropdown-menu">
-                  <button 
-                    className="dropdown-link"
-                    onClick={() => handleNavClick('blog')}
-                  >
+                  <button className="dropdown-link" onClick={() => handleNavClick('blog')}>
                     📝 Blog
                   </button>
-                  <button 
-                    className="dropdown-link"
-                    onClick={() => handleNavClick('resources')}
-                  >
+                  <button className="dropdown-link" onClick={() => handleNavClick('resources')}>
                     📖 Resources
                   </button>
-                  <button 
-                    className="dropdown-link"
-                    onClick={() => handleNavClick('careers')}
-                  >
+                  <button className="dropdown-link" onClick={() => handleNavClick('careers')}>
                     💼 Careers
                   </button>
-                  <button 
-                    className="dropdown-link"
-                    onClick={() => handleNavClick('support')}
-                  >
+                  <button className="dropdown-link" onClick={() => handleNavClick('support')}>
                     🆘 Support
                   </button>
                 </div>
@@ -130,10 +118,21 @@ const Navigation = ({
                 </button>
               </div>
             </div>
+
+            {/* Notification Bell */}
+            <NotificationBell 
+              currentUser={currentUser} 
+              setCurrentView={setCurrentView} 
+            />
           </nav>
 
           {/* Right: User Actions - Desktop */}
           <div className="header-actions">
+            <NotificationBell 
+              currentUser={currentUser} 
+              setCurrentView={setCurrentView} 
+            />
+
             <div className="user-dropdown">
               <button 
                 className="user-dropdown-btn"
@@ -150,44 +149,30 @@ const Navigation = ({
                     <span className="dropdown-user-role">{currentUser?.role}</span>
                   </div>
                   <hr />
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => handleNavClick('profile')}
-                  >
+                  <button className="dropdown-item" onClick={() => handleNavClick('profile')}>
                     👤 My Profile
                   </button>
                   {isStudentUser && (
-                    <button 
-                      className="dropdown-item"
-                      onClick={() => handleNavClick('courses')}
-                    >
+                    <button className="dropdown-item" onClick={() => handleNavClick('courses')}>
                       📚 My Courses
                     </button>
                   )}
-                  <button 
-                    className="dropdown-item"
-                    onClick={() => handleNavClick('dashboard')}
-                  >
+                  <button className="dropdown-item" onClick={() => handleNavClick('dashboard')}>
                     📊 Dashboard
                   </button>
                   {isAdminUser && (
-                    <button 
-                      className="dropdown-item"
-                      onClick={() => handleNavClick('admin')}
-                    >
+                    <button className="dropdown-item" onClick={() => handleNavClick('admin')}>
                       ⚙️ Admin Dashboard
                     </button>
                   )}
                   <hr />
-                  <button 
-                    className="dropdown-item logout-item"
-                    onClick={onLogout}
-                  >
+                  <button className="dropdown-item logout-item" onClick={onLogout}>
                     🚪 Logout
                   </button>
                 </div>
               )}
             </div>
+
             <a 
               href="https://wa.me/08021025168"
               target="_blank" 
@@ -212,7 +197,6 @@ const Navigation = ({
       <nav className="app-navigation">
         <div className="nav-container">
           <ul className="app-nav-links">
-            {/* Dashboard Link - Show for all roles */}
             <li>
               <button 
                 className={`app-nav-btn ${currentView === 'dashboard' ? 'active' : ''}`}
@@ -223,7 +207,6 @@ const Navigation = ({
               </button>
             </li>
 
-            {/* Courses Catalog Link - Show for all roles */}
             <li>
               <button 
                 className={`app-nav-btn ${currentView === 'courses' ? 'active' : ''}`}
@@ -234,7 +217,6 @@ const Navigation = ({
               </button>
             </li>
 
-            {/* Discussion Forum - For all roles */}
             <li>
               <button 
                 className={`app-nav-btn ${currentView === 'discussion' ? 'active' : ''}`}
@@ -245,7 +227,6 @@ const Navigation = ({
               </button>
             </li>
 
-            {/* Profile - For all roles */}
             <li>
               <button 
                 className={`app-nav-btn ${currentView === 'profile' ? 'active' : ''}`}
@@ -256,7 +237,6 @@ const Navigation = ({
               </button>
             </li>
 
-            {/* Teacher Dashboard Link - Only for teachers */}
             {isTeacherUser && (
               <>
                 <li>
@@ -280,7 +260,6 @@ const Navigation = ({
               </>
             )}
 
-            {/* Admin Dashboard Link - Only for admins */}
             {isAdminUser && (
               <>
                 <li>
@@ -304,7 +283,6 @@ const Navigation = ({
               </>
             )}
 
-            {/* Logout - Always visible */}
             <li>
               <button onClick={onLogout} className="app-nav-btn logout-btn">
                 <span className="nav-icon">🚪</span>
