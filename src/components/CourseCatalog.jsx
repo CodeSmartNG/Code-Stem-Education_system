@@ -564,17 +564,30 @@ const completeLesson = async (courseKey, lessonId) => {
             </div>
 
             {lesson.quiz && !showQuiz && (
-              <div className="quiz-section">
-                <h3>Knowledge Test</h3>
-                <p>Test your knowledge about this lesson:</p>
-                <button 
-                  onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
-                  className="start-quiz-btn"
-                >
-                  Start Quiz
-                </button>
-              </div>
-            )}
+  <div className="quiz-section">
+    <h3>Knowledge Test</h3>
+    {isCompleted ? (
+      <>
+        <p style={{ color: '#42b72a', fontWeight: 600 }}>
+          ✅ You have already passed this quiz.
+        </p>
+        <p style={{ color: '#65676b', fontSize: 13 }}>
+          Quiz can only be taken once. You can watch the video again anytime.
+        </p>
+      </>
+    ) : (
+      <>
+        <p>Test your knowledge about this lesson:</p>
+        <button 
+          onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
+          className="start-quiz-btn"
+        >
+          Start Quiz
+        </button>
+      </>
+    )}
+  </div>
+)}
 
             {showQuiz && currentQuiz && (
               <Quiz 
