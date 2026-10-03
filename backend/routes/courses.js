@@ -185,10 +185,17 @@ router.get('/:id', auth, async (req, res) => {
 
 
 // ✅ Update course
-router.put('/:id', [auth, isTeacher], async (req, res) => {
+
+// ✅ Get course by ID
+router.get('/:id', auth, async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
-    
+    const course = await Course.findById(req.params.id)
+      .populate('teacherId', 'name email whatsappNumber')
+      .populate({
+        path: 'lessonIds',
+        populate: { path: 'quizId' }   // ✅ NESTED populate for quizzes
+      });
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -196,32 +203,62 @@ router.put('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // Check if user owns this course
-    if (course.teacherId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You do not own this course.'
-      });
+    // ✅ Auto-enroll student on first access
+    if (req.user.role === 'student') {
+      const alreadyEnrolled = course.enrolledStudentIds?.some(
+        id => id.toString() === req.user._id.toString()
+      );
+
+      if (!alreadyEnrolled) {
+        course.enrolledStudentIds = course.enrolledStudentIds || [];
+        course.enrolledStudentIds.push(req.user._id);
+        course.enrolledStudents = (course.enrolledStudents || 0) + 1;
+        await course.save();
+        console.log('✅ Student auto-enrolled:', req.user._id);
+      }
     }
 
-    const updatedCourse = await Course.findByIdAndUpdate(
-      req.params.id,
-      { ...req.body, updatedAt: Date.now() },
-      { new: true, runValidators: true }
-    );
+    // ✅ Normalize + alias quizId → quiz
+    const courseObj = course.toObject();
+    courseObj.id = courseObj._id.toString();
+    courseObj._id = courseObj._id.toString();
+
+    if (Array.isArray(courseObj.lessonIds)) {
+      courseObj.lessons = courseObj.lessonIds.map(lesson => {
+        const lessonObj = {
+          ...lesson,
+          id: lesson._id ? lesson._id.toString() : lesson.id,
+          _id: lesson._id ? lesson._id.toString() : lesson._id
+        };
+
+        // ✅ Alias quizId → quiz so frontend finds lesson.quiz
+        lessonObj.quiz = lesson.quizId || null;
+
+        // ✅ Also normalize multimedia
+        if (Array.isArray(lesson.multimediaIds)) {
+          lessonObj.multimedia = lesson.multimediaIds;
+        }
+
+        return lessonObj;
+      });
+    } else {
+      courseObj.lessons = [];
+    }
 
     res.json({
       success: true,
-      data: updatedCourse
+      data: courseObj
     });
   } catch (error) {
-    console.error('Update course error:', error);
+    console.error('Get course error:', error);
     res.status(500).json({
       success: false,
       message: error.message
     });
   }
 });
+
+
 
 // ✅ Delete course
 router.delete('/:id', [auth, isTeacher], async (req, res) => {
