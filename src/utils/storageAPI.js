@@ -645,15 +645,21 @@ export const withdrawFromWallet = async (teacherId, amount, bankDetails) => {
 // QUIZ MANAGEMENT
 // ============================================
 
+
 export const createQuiz = async (lessonId, quizData) => {
   try {
-    const response = await apiCall('/quizzes', {
+    console.log('📝 createQuiz → lessonId:', lessonId);
+    console.log('📝 createQuiz → payload:', quizData);
+
+    const response = await apiCall(`/lessons/${lessonId}/quiz`, {
       method: 'POST',
-      body: JSON.stringify({ lessonId, ...quizData })
+      body: JSON.stringify(quizData)
     });
+
+    console.log('✅ createQuiz response:', response);
     return response.quiz || response.data;
   } catch (error) {
-    console.error('Error creating quiz:', error);
+    console.error('❌ Error creating quiz:', error);
     throw error;
   }
 };
@@ -862,38 +868,54 @@ export const getPlatformEarnings = async () => ({
 export const getTeacherTransactions = async () => [];
 export const getAllTransactions = async () => [];
 
-//Notifications 
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
 export const getNotifications = async () => {
-  const res = await fetch(`${API_BASE}/api/notifications`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-  if (!res.ok) throw new Error('Failed to fetch notifications');
-  return res.json();
+  try {
+    const response = await apiCall('/notifications');
+    return response.notifications || response.data || [];
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    return [];
+  }
 };
 
 export const getUnreadCount = async () => {
-  const res = await fetch(`${API_BASE}/api/notifications/unread-count`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-  if (!res.ok) return { count: 0 };
-  return res.json();
+  try {
+    const response = await apiCall('/notifications/unread-count');
+    return response;
+  } catch (error) {
+    console.error('Error getting unread count:', error);
+    return { count: 0 };
+  }
 };
 
 export const markNotificationRead = async (id) => {
-  const res = await fetch(`${API_BASE}/api/notifications/${id}/read`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-  return res.json();
+  try {
+    const response = await apiCall(`/notifications/${id}/read`, {
+      method: 'PATCH'
+    });
+    return response;
+  } catch (error) {
+    console.error('Error marking notification read:', error);
+    return { success: false };
+  }
 };
 
 export const markAllNotificationsRead = async () => {
-  const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-  return res.json();
+  try {
+    const response = await apiCall('/notifications/read-all', {
+      method: 'PATCH'
+    });
+    return response;
+  } catch (error) {
+    console.error('Error marking all read:', error);
+    return { success: false };
+  }
 };
+
 // ============================================
 // DEFAULT EXPORT
 // ============================================
@@ -980,6 +1002,12 @@ resetPassword,
   getTeacherWhatsAppUrl,
   getTeacherWhatsAppUrlAsync,
   getTeacherWhatsAppNumber,
+
+  // Notifications
+  getNotifications,
+  getUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
 
   // Lesson Access & Purchase
   canAccessLesson,
