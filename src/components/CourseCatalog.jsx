@@ -1,16 +1,16 @@
 // src/components/CourseCatalog.jsx
 
 import React, { useState, useEffect } from 'react';
-import { 
-  getCourses, 
-  getCurrentUser, 
-  canAccessLesson, 
-  purchaseLesson, 
+import {
+  getCourses,
+  getCurrentUser,
+  canAccessLesson,
+  purchaseLesson,
   getTeacherWhatsAppUrl,
   getMultimediaByLesson,
   getLessonById,
-  getCourseById
-} from '../utils/storageAPI';  // ✅ FIXED: was '../utils/storage'
+  getCourseById,
+} from '../utils/storageAPI';
 import Quiz from './Quiz';
 import MultimediaViewer from './MultimediaViewer';
 import PaymentModal from './payments/PaymentModal';
@@ -30,82 +30,63 @@ const CourseCatalog = ({ student, setStudent }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [lessonMultimedia, setLessonMultimedia] = useState([]);
 
-  // Load courses from storage
   useEffect(() => {
     loadCourses();
   }, []);
 
-  // ✅ Load courses from storageAPI - handles arrays and objects
-  
+  // ============================================
+  // LOAD COURSES
+  // ============================================
+  const loadCourses = async () => {
+    try {
+      setIsLoading(true);
+      const coursesData = await getCourses();
+      console.log('✅ Loaded courses:', coursesData?.length || 0);
 
-      // Get all courses from backend (returns an array)
-      const loadCourses = async () => {
-  try {
-    setIsLoading(true);
+      const normalizedCourses = (coursesData || []).map((course) => {
+        const courseId = course.id || course._id;
+        let lessons = course.lessons || course.lessonIds || [];
 
-    // Get all courses from backend
-    const coursesData = await getCourses();
-    console.log('✅ Loaded courses:', coursesData);
-    console.log('📚 Number of courses:', coursesData?.length || 0);
+        if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
+          console.warn('⚠️ Lessons are IDs only — backend needs to populate:', lessons);
+          lessons = [];
+        }
 
-    // ✅ Normalize every course
-    const normalizedCourses = (coursesData || []).map(course => {
-      const courseId = course.id || course._id;
+        lessons = lessons.map((lesson) => ({
+          ...lesson,
+          id: lesson.id || lesson._id,
+          _id: lesson._id || lesson.id,
+        }));
 
-      // Backend may return lessons in 'lessons' or 'lessonIds'
-      let lessons = course.lessons || course.lessonIds || [];
+        return {
+          ...course,
+          id: courseId,
+          _id: course._id || courseId,
+          lessons,
+        };
+      });
 
-      // If lessons are just IDs (strings), skip rendering
-      if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
-        console.warn('⚠️ Lessons are IDs only — backend needs to populate:', lessons);
-        lessons = [];
-      }
+      const publishedCourses = {};
+      normalizedCourses.forEach((course) => {
+        if (course.isPublished !== false) {
+          publishedCourses[course.id] = course;
+        }
+      });
 
-      // Normalize each lesson
-      lessons = lessons.map(lesson => ({
-        ...lesson,
-        id: lesson.id || lesson._id,
-        _id: lesson._id || lesson.id
-      }));
+      setCourses(publishedCourses);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error loading courses:', err);
+      setCourses({});
+      setError('Failed to load courses. Please refresh the page.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      return {
-        ...course,
-        id: courseId,
-        _id: course._id || courseId,
-        lessons
-      };
-    });
-
-    console.log('✅ Normalized courses:', normalizedCourses);
-
-    // ✅ Filter published courses — USE normalizedCourses, NOT coursesData
-    const publishedCourses = {};
-    normalizedCourses.forEach(course => {
-      if (course.isPublished !== false) {
-        publishedCourses[course.id] = course;
-        console.log(`📢 Published: ${course.title} — ${course.lessons?.length || 0} lessons`);
-      } else {
-        console.log(`📝 Draft (hidden): ${course.title}`);
-      }
-    });
-
-    console.log('✅ Published courses:', Object.keys(publishedCourses).length);
-    setCourses(publishedCourses);
-    setError(null);
-  } catch (err) {
-    console.error('❌ Error loading courses:', err);
-    setCourses({});
-    setError('Failed to load courses. Please refresh the page.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-
-      
-
-  // ✅ Load multimedia for a specific lesson from backend
+  // ============================================
+  // LOAD LESSON MULTIMEDIA
+  // ============================================
   const loadLessonMultimedia = async (courseKey, lessonId) => {
     try {
       setIsLoading(true);
@@ -114,14 +95,14 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       const lesson = await getLessonById(lessonId);
       if (lesson) {
-        setCourses(prev => ({
+        setCourses((prev) => ({
           ...prev,
           [courseKey]: {
             ...prev[courseKey],
-            lessons: prev[courseKey]?.lessons?.map(l => 
+            lessons: prev[courseKey]?.lessons?.map((l) =>
               l.id === lessonId ? { ...l, ...lesson } : l
-            )
-          }
+            ),
+          },
         }));
       }
     } catch (error) {
@@ -132,7 +113,9 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  // Safe Object.entries wrapper
+  // ============================================
+  // HELPERS
+  // ============================================
   const safeObjectEntries = (obj) => {
     try {
       if (!obj || typeof obj !== 'object') return [];
@@ -143,7 +126,6 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  // Safe Object.keys wrapper
   const safeObjectKeys = (obj) => {
     try {
       if (!obj || typeof obj !== 'object') return [];
@@ -154,37 +136,32 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  // Toggle course expansion
   const toggleCourseExpansion = (courseKey) => {
-    setExpandedCourses(prev => ({
+    setExpandedCourses((prev) => ({
       ...prev,
-      [courseKey]: !prev[courseKey]
+      [courseKey]: !prev[courseKey],
     }));
   };
 
-  // Expand all courses
   const expandAllCourses = () => {
-    try {
-      const courseKeys = safeObjectKeys(courses);
-      const allExpanded = {};
-      courseKeys.forEach(key => {
-        allExpanded[key] = true;
-      });
-      setExpandedCourses(allExpanded);
-    } catch (err) {
-      console.error('Error expanding courses:', err);
-    }
+    const courseKeys = safeObjectKeys(courses);
+    const allExpanded = {};
+    courseKeys.forEach((key) => {
+      allExpanded[key] = true;
+    });
+    setExpandedCourses(allExpanded);
   };
 
-  // Collapse all courses
   const collapseAllCourses = () => {
     setExpandedCourses({});
   };
 
+  // ============================================
+  // QUIZ HANDLERS
+  // ============================================
   const handleStartQuiz = (courseKey, lessonIndex) => {
     try {
       if (!courses || !courses[courseKey]) return;
-
       const course = courses[courseKey];
       const lesson = course.lessons?.[lessonIndex];
 
@@ -197,7 +174,7 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  const handleQuizComplete = (scorePercentage, passed) => {
+  const handleQuizComplete = async (scorePercentage, passed) => {
     try {
       if (!selectedCourse || !courses[selectedCourse]) return;
 
@@ -209,15 +186,20 @@ const CourseCatalog = ({ student, setStudent }) => {
         updatedStudent.completedLessons.push(lessonId);
 
         const totalLessons = courses[selectedCourse].lessons?.length || 0;
-        const completedLessons = courses[selectedCourse].lessons?.filter(
-          lesson => updatedStudent.completedLessons?.includes(`${selectedCourse}-${lesson.id}`)
-        ).length || 0;
+        const completedLessons =
+          courses[selectedCourse].lessons?.filter((lesson) =>
+            updatedStudent.completedLessons?.includes(`${selectedCourse}-${lesson.id}`)
+          ).length || 0;
 
         if (!updatedStudent.progress) updatedStudent.progress = {};
-        updatedStudent.progress[selectedCourse] = Math.min((completedLessons / totalLessons) * 100, 100);
+        updatedStudent.progress[selectedCourse] = Math.min(
+          (completedLessons / totalLessons) * 100,
+          100
+        );
+
+        await setStudent(updatedStudent);
       }
 
-      setStudent(updatedStudent);
       setShowQuiz(false);
       setCurrentQuiz(null);
     } catch (err) {
@@ -230,15 +212,9 @@ const CourseCatalog = ({ student, setStudent }) => {
     setCurrentQuiz(null);
   };
 
-  // Check if student can access lesson
-  const canAccessLessonContent = (courseKey, lessonId) => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) return false;
-
-    return canAccessLesson(currentUser.id, courseKey, lessonId);
-  };
-
-  // Handle lesson purchase
+  // ============================================
+  // LESSON PURCHASE
+  // ============================================
   const handlePurchaseLesson = async (courseKey, lessonIndex) => {
     try {
       setIsLoading(true);
@@ -279,7 +255,9 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
   };
 
-  // Handle starting a lesson
+  // ============================================
+  // START LESSON (also handles reopening completed lessons)
+  // ============================================
   const handleStartLesson = async (courseKey, lessonIndex) => {
     try {
       if (!courses || !courses[courseKey]) return;
@@ -298,62 +276,63 @@ const CourseCatalog = ({ student, setStudent }) => {
         return;
       }
 
+      // Paid lesson — needs purchase
       if (!lesson.isFree && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
-        setSelectedLesson({ 
-          courseKey, 
-          lessonIndex, 
-          lesson: { 
-            ...lesson, 
+        setSelectedLesson({
+          courseKey,
+          lessonIndex,
+          lesson: {
+            ...lesson,
             title: lesson.title || 'Untitled Lesson',
             courseId: courseKey,
             price: lesson.price || 500,
             teacherId: course.teacherId || 'default_teacher',
-            teacherName: course.teacherName || 'Course Teacher'
-          } 
+            teacherName: course.teacherName || 'Course Teacher',
+          },
         });
         setShowPaymentModal(true);
         return;
       }
 
       if (lesson.isLocked && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
-        setSelectedLesson({ 
-          courseKey, 
-          lessonIndex, 
-          lesson: { 
-            ...lesson, 
+        setSelectedLesson({
+          courseKey,
+          lessonIndex,
+          lesson: {
+            ...lesson,
             title: lesson.title || 'Untitled Lesson',
             courseId: courseKey,
             price: lesson.price || 500,
             teacherId: course.teacherId || 'default_teacher',
-            teacherName: course.teacherName || 'Course Teacher'
-          } 
+            teacherName: course.teacherName || 'Course Teacher',
+          },
         });
         setShowPaymentModal(true);
         return;
       }
 
+      // ✅ Free or purchased — open lesson (even if already completed)
       setSelectedCourse(courseKey);
-setCurrentLesson(lessonIndex);
-setShowQuiz(false);
+      setCurrentLesson(lessonIndex);
+      setShowQuiz(false);
 
-// ✅ Trigger enrollment on course access
-try {
-  await getCourseById(courseKey);
-  console.log('✅ Course accessed — enrollment triggered');
-} catch (err) {
-  console.warn('Enrollment trigger failed:', err);
-}
+      try {
+        await getCourseById(courseKey);
+      } catch (err) {
+        console.warn('Enrollment trigger failed:', err);
+      }
 
-await loadLessonMultimedia(courseKey, lesson.id);
-
-window.scrollTo(0, 0);
+      await loadLessonMultimedia(courseKey, lesson.id);
+      window.scrollTo(0, 0);
     } catch (err) {
       console.error('Error starting lesson:', err);
       setError('Failed to start lesson. Please try again.');
     }
   };
 
-  // Handle payment success
+  // ============================================
+  // PAYMENT SUCCESS
+  // ============================================
   const handlePaymentSuccess = async (paymentData) => {
     try {
       setIsLoading(true);
@@ -361,8 +340,8 @@ window.scrollTo(0, 0);
 
       if (selectedLesson) {
         const teacherPaymentSuccess = await processTeacherPayment(
-          paymentData, 
-          selectedLesson.lesson, 
+          paymentData,
+          selectedLesson.lesson,
           student
         );
 
@@ -376,9 +355,9 @@ window.scrollTo(0, 0);
         await loadLessonMultimedia(selectedLesson.courseKey, selectedLesson.lesson.id);
 
         if (teacherPaymentSuccess) {
-          alert('🎉 Payment successful! Lesson unlocked and teacher payment processed.');
+          alert('🎉 Payment successful! Lesson unlocked.');
         } else {
-          alert('🎉 Payment successful! Lesson unlocked. Teacher payment is being processed.');
+          alert('🎉 Payment successful! Lesson unlocked.');
         }
       }
       setIsLoading(false);
@@ -391,74 +370,82 @@ window.scrollTo(0, 0);
       setSelectedLesson(null);
       setIsLoading(false);
 
-      alert('🎉 Payment successful! Lesson unlocked. There was an issue with teacher payout - support will handle it.');
+      alert('🎉 Payment successful! Lesson unlocked.');
     }
   };
 
-const completeLesson = async (courseKey, lessonId) => {
-  try {
-    console.log('🎯 Complete Lesson clicked:', { courseKey, lessonId });
+  // ============================================
+  // COMPLETE LESSON
+  // ============================================
+  const completeLesson = async (courseKey, lessonId) => {
+    try {
+      console.log('🎯 Complete Lesson clicked:', { courseKey, lessonId });
 
-    if (!courses || !courses[courseKey]) {
-      console.warn('⚠️ Course not found:', courseKey);
-      return;
+      if (!courses || !courses[courseKey]) return;
+      if (!lessonId) return;
+
+      const lessonKey = `${courseKey}-${lessonId}`;
+
+      if (student.completedLessons?.includes(lessonKey)) return;
+
+      const updatedStudent = { ...student };
+      if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
+      updatedStudent.completedLessons.push(lessonKey);
+
+      const totalLessons = courses[courseKey].lessons?.length || 0;
+      const completedLessons =
+        courses[courseKey].lessons?.filter((lesson) =>
+          updatedStudent.completedLessons?.includes(`${courseKey}-${lesson.id || lesson._id}`)
+        ).length || 0;
+
+      if (!updatedStudent.progress) updatedStudent.progress = {};
+      updatedStudent.progress[courseKey] = Math.min(
+        (completedLessons / totalLessons) * 100,
+        100
+      );
+
+      await setStudent(updatedStudent);
+      console.log('✅ Lesson completed, progress:', updatedStudent.progress[courseKey]);
+    } catch (err) {
+      console.error('❌ Error completing lesson:', err);
+      alert('Failed to mark lesson complete. Please try again.');
     }
-
-    if (!lessonId) {
-      console.warn('⚠️ No lesson ID');
-      return;
-    }
-
-    const lessonKey = `${courseKey}-${lessonId}`;
-
-    // Already completed?
-    if (student.completedLessons?.includes(lessonKey)) {
-      console.log('ℹ️ Already completed');
-      return;
-    }
-
-    // Build updated student
-    const updatedStudent = { ...student };
-    if (!updatedStudent.completedLessons) updatedStudent.completedLessons = [];
-    updatedStudent.completedLessons.push(lessonKey);
-
-    // Recalculate progress
-    const totalLessons = courses[courseKey].lessons?.length || 0;
-    const completedLessons = courses[courseKey].lessons?.filter(
-      lesson => updatedStudent.completedLessons?.includes(`${courseKey}-${lesson.id || lesson._id}`)
-    ).length || 0;
-
-    if (!updatedStudent.progress) updatedStudent.progress = {};
-    updatedStudent.progress[courseKey] = Math.min((completedLessons / totalLessons) * 100, 100);
-
-    console.log('✅ New progress:', updatedStudent.progress[courseKey], '%');
-
-    // ✅ Await setStudent — it's async and saves to backend
-    await setStudent(updatedStudent);
-    console.log('✅ Saved to backend');
-
-  } catch (err) {
-    console.error('❌ Error completing lesson:', err);
-    alert('Failed to mark lesson complete. Please try again.');
-  }
-};
+  };
 
   const handleViewCertificate = (courseKey) => {
-    try {
-      if (!courses || !courses[courseKey]) return;
+    if (!courses || !courses[courseKey]) return;
+    const course = courses[courseKey];
+    alert(
+      `🏆 Congratulations to ${student?.name || 'Student'}!\n\nYou have completed the course: ${course.title}\n\nDate: ${new Date().toLocaleDateString()}`
+    );
+  };
 
-      const course = courses[courseKey];
-      alert(`🏆 Congratulations to ${student?.name || 'Student'}!\n\nYou have completed the course: ${course.title}\n\nDate: ${new Date().toLocaleDateString()}\n\nYou can get your certificate at the office!`);
-    } catch (err) {
-      console.error('Error viewing certificate:', err);
+  const getTeacherContactUrl = (teacherId) => getTeacherWhatsAppUrl(teacherId);
+
+  // ============================================
+  // NAVIGATE TO ANOTHER LESSON
+  // ============================================
+  const goToLesson = async (newIndex) => {
+    const course = courses[selectedCourse];
+    if (!course) return;
+
+    const newLesson = course.lessons?.[newIndex];
+    if (!newLesson) return;
+
+    setCurrentLesson(newIndex);
+    setShowQuiz(false);
+    setCurrentQuiz(null);
+
+    if (newLesson.id) {
+      await loadLessonMultimedia(selectedCourse, newLesson.id);
     }
+
+    window.scrollTo(0, 0);
   };
 
-  const getTeacherContactUrl = (teacherId) => {
-    return getTeacherWhatsAppUrl(teacherId);
-  };
-
-  // Safety check for empty courses
+  // ============================================
+  // RENDER — EMPTY STATE
+  // ============================================
   const courseEntries = safeObjectEntries(courses);
   if (courseEntries.length === 0) {
     return (
@@ -479,7 +466,9 @@ const completeLesson = async (courseKey, lessonId) => {
     );
   }
 
-  // If a course is selected, show its lessons
+  // ============================================
+  // RENDER — LESSON VIEW
+  // ============================================
   if (selectedCourse && courses[selectedCourse]) {
     const course = courses[selectedCourse];
     const lesson = course.lessons?.[currentLesson];
@@ -500,170 +489,148 @@ const completeLesson = async (courseKey, lessonId) => {
 
     const isCompleted = student.completedLessons?.includes(`${selectedCourse}-${lesson.id}`);
     const currentUser = getCurrentUser();
-    const hasAccess = currentUser ? canAccessLesson(currentUser.id, selectedCourse, lesson.id) : false;
+    const hasAccess = currentUser
+      ? canAccessLesson(currentUser.id, selectedCourse, lesson.id)
+      : false;
 
     return (
-  <div className="course-lesson">
-    <button onClick={() => setSelectedCourse(null)} className="back-btn">
-      ← Back to Courses
-    </button>
+      <div className="course-lesson">
+        <button onClick={() => setSelectedCourse(null)} className="back-btn">
+          ← Back to Courses
+        </button>
 
-    <div className="lesson-header">
-      <h2>{lesson.title || 'Untitled Lesson'}</h2>
-      {isCompleted && <span className="completion-badge">Completed ✓</span>}
-      {!lesson.isFree && (
-        <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
-          {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
-        </span>
-      )}
-    </div>
-
-    {course.teacherName && (
-      <div className="teacher-info">
-        <strong>Instructor:</strong> {course.teacherName}
-        {course.teacherId && getTeacherContactUrl(course.teacherId) && (
-          <a 
-            href={getTeacherContactUrl(course.teacherId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="whatsapp-contact-btn"
-          >
-            💬 Chat on WhatsApp
-          </a>
-        )}
-      </div>
-    )}
-
-    {!hasAccess && !lesson.isFree ? (
-      <div className="payment-required">
-        <div className="payment-prompt">
-          <h3>🔒 Premium Content</h3>
-          <p>This lesson requires payment to access the content.</p>
-          <div className="price-display">₦{lesson.price}</div>
-          <button 
-            onClick={() => handlePurchaseLesson(selectedCourse, currentLesson)}
-            className="purchase-access-btn"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processing...' : 'Purchase Access'}
-          </button>
-        </div>
-      </div>
-    ) : (
-      <>
-        {lessonMultimedia && lessonMultimedia.length > 0 && (
-          <div className="multimedia-container">
-            <h3>📹 Lesson Materials</h3>
-            <MultimediaViewer multimedia={lessonMultimedia} />
-          </div>
-        )}
-
-        <div className="lesson-content">
-          <p>{lesson.content}</p>
-          <p><strong>Duration:</strong> {lesson.duration}</p>
+        <div className="lesson-header">
+          <h2>{lesson.title || 'Untitled Lesson'}</h2>
+          {isCompleted && <span className="completion-badge">Completed ✓</span>}
+          {!lesson.isFree && (
+            <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
+              {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
+            </span>
+          )}
         </div>
 
-        {/* ✅ Quiz — disabled if already completed */}
-        {lesson.quiz && !showQuiz && (
-          <div className="quiz-section">
-            <h3>Knowledge Test</h3>
-            {isCompleted ? (
-              <>
-                <p style={{ color: '#42b72a', fontWeight: 600 }}>
-                  ✅ You have already passed this quiz.
-                </p>
-                <p style={{ color: '#65676b', fontSize: 13 }}>
-                  Quiz can only be taken once. You can watch the video again anytime.
-                </p>
-              </>
-            ) : (
-              <>
-                <p>Test your knowledge about this lesson:</p>
-                <button 
-                  onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
-                  className="start-quiz-btn"
-                >
-                  Start Quiz
-                </button>
-              </>
+        {course.teacherName && (
+          <div className="teacher-info">
+            <strong>Instructor:</strong> {course.teacherName}
+            {course.teacherId && getTeacherContactUrl(course.teacherId) && (
+              <a
+                href={getTeacherContactUrl(course.teacherId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whatsapp-contact-btn"
+              >
+                💬 Chat on WhatsApp
+              </a>
             )}
           </div>
         )}
 
-        {showQuiz && currentQuiz && (
-          <Quiz 
-            quiz={currentQuiz}
-            onComplete={handleQuizComplete}
-            onClose={handleCloseQuiz}
-            API_BASE={import.meta.env.VITE_API_URL || 'https://code-stem-education-system.onrender.com'}
-          />
+        {!hasAccess && !lesson.isFree ? (
+          <div className="payment-required">
+            <div className="payment-prompt">
+              <h3>🔒 Premium Content</h3>
+              <p>This lesson requires payment to access the content.</p>
+              <div className="price-display">₦{lesson.price}</div>
+              <button
+                onClick={() => handlePurchaseLesson(selectedCourse, currentLesson)}
+                className="purchase-access-btn"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Processing...' : 'Purchase Access'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {lessonMultimedia && lessonMultimedia.length > 0 && (
+              <div className="multimedia-container">
+                <h3>📹 Lesson Materials</h3>
+                <MultimediaViewer multimedia={lessonMultimedia} />
+              </div>
+            )}
+
+            <div className="lesson-content">
+              <p>{lesson.content}</p>
+              <p><strong>Duration:</strong> {lesson.duration}</p>
+            </div>
+
+            {/* ✅ Quiz — hidden if already completed */}
+            {lesson.quiz && !showQuiz && (
+              <div className="quiz-section">
+                <h3>Knowledge Test</h3>
+                {isCompleted ? (
+                  <>
+                    <p style={{ color: '#42b72a', fontWeight: 600 }}>
+                      ✅ You have already passed this quiz.
+                    </p>
+                    <p style={{ color: '#65676b', fontSize: 13 }}>
+                      Quiz can only be taken once. You can watch the video again anytime.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>Test your knowledge about this lesson:</p>
+                    <button
+                      onClick={() => handleStartQuiz(selectedCourse, currentLesson)}
+                      className="start-quiz-btn"
+                    >
+                      Start Quiz
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {showQuiz && currentQuiz && (
+              <Quiz
+                quiz={currentQuiz}
+                onComplete={handleQuizComplete}
+                onClose={handleCloseQuiz}
+                API_BASE={
+                  import.meta.env.VITE_API_URL ||
+                  'https://code-stem-education-system.onrender.com'
+                }
+              />
+            )}
+          </>
         )}
-      </>
-    )}
 
-    {/* ✅ FIXED: Navigation with multimedia reload */}
-    <div className="lesson-navigation">
-      {currentLesson > 0 && (
-        <button 
-          onClick={async () => {
-            const newIndex = currentLesson - 1;
-            const newLesson = course.lessons[newIndex];
-            setCurrentLesson(newIndex);
-            setShowQuiz(false);
-            if (newLesson?.id) {
-              await loadLessonMultimedia(selectedCourse, newLesson.id);
-            }
-            window.scrollTo(0, 0);
-          }}
-        >
-          ← Previous Lesson
-        </button>
-      )}
+        {/* ✅ Lesson Navigation */}
+        <div className="lesson-navigation">
+          {currentLesson > 0 && (
+            <button onClick={() => goToLesson(currentLesson - 1)}>
+              ← Previous Lesson
+            </button>
+          )}
 
-      <button 
-        onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
-        className="complete-btn"
-        disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
-      >
-        {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
-      </button>
+          <button
+            onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
+            className="complete-btn"
+            disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
+          >
+            {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
+          </button>
 
-      {currentLesson < (course.lessons?.length || 0) - 1 && (
-        <button 
-          onClick={async () => {
-            const newIndex = currentLesson + 1;
-            const newLesson = course.lessons[newIndex];
-            setCurrentLesson(newIndex);
-            setShowQuiz(false);
-            if (newLesson?.id) {
-              await loadLessonMultimedia(selectedCourse, newLesson.id);
-            }
-            window.scrollTo(0, 0);
-          }}
-        >
-          Next Lesson →
-        </button>
-      )}
-    </div>
-  </div>
-);
-    
+          {currentLesson < (course.lessons?.length || 0) - 1 && (
+            <button onClick={() => goToLesson(currentLesson + 1)}>
+              Next Lesson →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-
-                
-
-  // Main course catalog view
+  // ============================================
+  // RENDER — COURSE CATALOG (main view)
+  // ============================================
   return (
     <div className="course-catalog">
       <div className="catalog-header">
         <h2>STEM Courses</h2>
         <div className="course-controls">
-          <button onClick={expandAllCourses} className="control-btn">
-            Expand All
-          </button>
-          <button onClick={collapseAllCourses} className="control-btn">
-            Collapse All
-          </button>
+          <button onClick={expandAllCourses} className="control-btn">Expand All</button>
+          <button onClick={collapseAllCourses} className="control-btn">Collapse All</button>
         </div>
       </div>
 
@@ -677,8 +644,8 @@ const completeLesson = async (courseKey, lessonId) => {
       <div className="courses-grid">
         {courseEntries.map(([key, course]) => {
           const currentUser = getCurrentUser();
-          const paidLessonsCount = course.lessons?.filter(lesson => !lesson.isFree).length || 0;
-          const freeLessonsCount = course.lessons?.filter(lesson => lesson.isFree).length || 0;
+          const paidLessonsCount = course.lessons?.filter((l) => !l.isFree).length || 0;
+          const freeLessonsCount = course.lessons?.filter((l) => l.isFree).length || 0;
 
           return (
             <div key={key} className="course-card">
@@ -690,7 +657,7 @@ const completeLesson = async (courseKey, lessonId) => {
                     <div className="course-teacher">
                       <small>By: {course.teacherName}</small>
                       {course.teacherId && getTeacherContactUrl(course.teacherId) && (
-                        <a 
+                        <a
                           href={getTeacherContactUrl(course.teacherId)}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -701,10 +668,7 @@ const completeLesson = async (courseKey, lessonId) => {
                       )}
                     </div>
                   )}
-                  <button 
-                    onClick={() => toggleCourseExpansion(key)}
-                    className="expand-btn"
-                  >
+                  <button onClick={() => toggleCourseExpansion(key)} className="expand-btn">
                     {expandedCourses[key] ? '▼ Hide' : '► Show'} Lessons ({course.lessons?.length || 0})
                   </button>
                 </div>
@@ -720,30 +684,24 @@ const completeLesson = async (courseKey, lessonId) => {
               </div>
 
               <div className="course-meta">
-                <span className="progress-text">
-                  Progress: {student.progress?.[key] || 0}%
-                </span>
+                <span className="progress-text">Progress: {student.progress?.[key] || 0}%</span>
                 <span className="completed-lessons">
-                  Completed: {course.lessons?.filter(lesson => 
+                  Completed:{' '}
+                  {course.lessons?.filter((lesson) =>
                     student.completedLessons?.includes(`${key}-${lesson.id}`)
-                  ).length || 0} / {course.lessons?.length || 0}
+                  ).length || 0}{' '}
+                  / {course.lessons?.length || 0}
                 </span>
               </div>
 
               <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{width: `${student.progress?.[key] || 0}%`}}
-                >
+                <div className="progress-fill" style={{ width: `${student.progress?.[key] || 0}%` }}>
                   {student.progress?.[key] || 0}%
                 </div>
               </div>
 
               {student.progress?.[key] === 100 && (
-                <button 
-                  onClick={() => handleViewCertificate(key)}
-                  className="certificate-btn"
-                >
+                <button onClick={() => handleViewCertificate(key)} className="certificate-btn">
                   🏆 Get Certificate
                 </button>
               )}
@@ -752,11 +710,18 @@ const completeLesson = async (courseKey, lessonId) => {
                 <div className="lessons-list">
                   {course.lessons?.map((lesson, index) => {
                     const isLessonCompleted = student.completedLessons?.includes(`${key}-${lesson.id}`);
-                    const hasAccess = currentUser ? canAccessLesson(currentUser.id, key, lesson.id) : false;
+                    const hasAccess = currentUser
+                      ? canAccessLesson(currentUser.id, key, lesson.id)
+                      : false;
                     const isPaidLesson = !lesson.isFree;
 
                     return (
-                      <div key={lesson.id} className={`lesson-item ${isLessonCompleted ? 'completed' : ''} ${isPaidLesson && !hasAccess ? 'locked' : ''}`}>
+                      <div
+                        key={lesson.id}
+                        className={`lesson-item ${isLessonCompleted ? 'completed' : ''} ${
+                          isPaidLesson && !hasAccess ? 'locked' : ''
+                        }`}
+                      >
                         <div className="lesson-info">
                           <div className="lesson-main-info">
                             <span className="lesson-title">
@@ -785,21 +750,26 @@ const completeLesson = async (courseKey, lessonId) => {
                             )}
                           </div>
                         </div>
-  <div className="lesson-actions">
 
-    
-  <button 
-  onClick={() => handleStartLesson(key, index)}
-  disabled={isLoading}
-  className={
-    isLessonCompleted ? 'review-btn' : 
-    isPaidLesson && !hasAccess ? 'purchase-btn' : 'start-btn'
-  }
->
-  {isLessonCompleted ? '👁️ Review' : 
-   isPaidLesson && !hasAccess ? `Purchase - ₦${lesson.price}` : 'Start Lesson'}
-</button>
-     </div>
+                        <div className="lesson-actions">
+                          <button
+                            onClick={() => handleStartLesson(key, index)}
+                            disabled={isLoading}
+                            className={
+                              isLessonCompleted
+                                ? 'review-btn'
+                                : isPaidLesson && !hasAccess
+                                ? 'purchase-btn'
+                                : 'start-btn'
+                            }
+                          >
+                            {isLessonCompleted
+                              ? '👁️ Review'
+                              : isPaidLesson && !hasAccess
+                              ? `Purchase - ₦${lesson.price}`
+                              : 'Start Lesson'}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
