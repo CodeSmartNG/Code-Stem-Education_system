@@ -786,18 +786,20 @@ const completeLesson = async (courseKey, lessonId) => {
                           </div>
                         </div>
   <div className="lesson-actions">
+
+    
   <button 
-    onClick={() => handleStartLesson(key, index)}
-    disabled={isLoading}
-    className={
-      isLessonCompleted ? 'review-btn' : 
-      isPaidLesson && !hasAccess ? 'purchase-btn' : 'start-btn'
-    }
-  >
-    {isLessonCompleted ? '👁️ Review' : 
-     isPaidLesson && !hasAccess ? `Purchase - ₦${lesson.price}` : 'Start Lesson'}
-  </button>
-</div>
+  onClick={() => handleStartLesson(key, index)}
+  disabled={isLoading}
+  className={
+    isLessonCompleted ? 'review-btn' : 
+    isPaidLesson && !hasAccess ? 'purchase-btn' : 'start-btn'
+  }
+>
+  {isLessonCompleted ? '👁️ Review' : 
+   isPaidLesson && !hasAccess ? `Purchase - ₦${lesson.price}` : 'Start Lesson'}
+</button>
+     </div>
                       </div>
                     );
                   })}
