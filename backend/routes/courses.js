@@ -58,6 +58,8 @@ router.post('/', [
 
 // ✅ Get all courses (published only for students)
 // ✅ Get all courses (published only for students)
+
+// ✅ Get all courses (published only for students)
 router.get('/', auth, async (req, res) => {
   try {
     let query = {};
@@ -76,26 +78,40 @@ router.get('/', auth, async (req, res) => {
 
     const courses = await Course.find(query)
       .populate('teacherId', 'name email whatsappNumber')
-      .populate('lessonIds')
+      .populate({
+        path: 'lessonIds',
+        populate: { path: 'quizId' }   // ✅ NESTED populate — critical!
+      })
       .sort({ createdAt: -1 });
 
     console.log('✅ Courses found:', courses.length);
     console.log('📚 Titles:', courses.map(c => c.title));
     console.log('=========================\n');
 
-    // ✅ Normalize and send — ONLY ONE res.json()
+    // ✅ Normalize + alias quizId → quiz
     const normalizedCourses = courses.map(course => {
       const obj = course.toObject();
       obj.id = obj._id.toString();
       obj._id = obj._id.toString();
 
-      // Populate lessons from lessonIds
       if (obj.lessonIds && Array.isArray(obj.lessonIds)) {
-        obj.lessons = obj.lessonIds.map(lesson => ({
-          ...lesson,
-          id: lesson._id ? lesson._id.toString() : lesson.id,
-          _id: lesson._id ? lesson._id.toString() : lesson._id
-        }));
+        obj.lessons = obj.lessonIds.map(lesson => {
+          const lessonObj = {
+            ...lesson,
+            id: lesson._id ? lesson._id.toString() : lesson.id,
+            _id: lesson._id ? lesson._id.toString() : lesson._id
+          };
+
+          // ✅ ALIAS: quizId → quiz so frontend finds lesson.quiz
+          lessonObj.quiz = lesson.quizId || null;
+
+          // ✅ Also normalize multimedia array
+          if (Array.isArray(lesson.multimediaIds)) {
+            lessonObj.multimedia = lesson.multimediaIds;
+          }
+
+          return lessonObj;
+        });
       } else {
         obj.lessons = [];
       }
@@ -118,6 +134,11 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
+
+
+
+
+
 // ✅ Get course by ID
 router.get('/:id', auth, async (req, res) => {
   try {
