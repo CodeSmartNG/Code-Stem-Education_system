@@ -13,13 +13,18 @@ const { auth, isTeacher } = require('../middleware/auth');
 const normalizeLesson = (lesson) => {
   const obj = lesson.toObject ? lesson.toObject() : lesson;
   const id = obj._id ? obj._id.toString() : obj.id;
-  return {
+
+  // ✅ Alias quizId → quiz for frontend compatibility
+  const normalized = {
     ...obj,
     id: id,
-    _id: id
+    _id: id,
+    quiz: obj.quizId || null,
+    multimedia: obj.multimediaIds || []
   };
-};
 
+  return normalized;
+};
 
 // ============================================
 // GET all lessons (optionally by course)
@@ -30,9 +35,11 @@ router.get('/', auth, async (req, res) => {
     const { courseId } = req.query;
     const query = courseId ? { courseId } : {};
 
-    const lessons = await Lesson.find(query).sort({ order: 1 });
+    const lessons = await Lesson.find(query)
+      .populate('quizId')          // ✅ Populate quiz
+      .populate('multimediaIds')   // ✅ Populate multimedia
+      .sort({ order: 1 });
 
-    // ✅ Normalize every lesson to have 'id'
     const normalizedLessons = lessons.map(normalizeLesson);
 
     res.json({
@@ -56,7 +63,16 @@ router.get('/', auth, async (req, res) => {
 // ============================================
 router.get('/:id', auth, async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lesson ID format'
+      });
+    }
+
+    const lesson = await Lesson.findById(req.params.id)
+      .populate('quizId')          // ✅ Populate quiz
+      .populate('multimediaIds');  // ✅ Populate multimedia
 
     if (!lesson) {
       return res.status(404).json({
@@ -65,7 +81,6 @@ router.get('/:id', auth, async (req, res) => {
       });
     }
 
-    // ✅ Normalize
     const normalized = normalizeLesson(lesson);
 
     res.json({
@@ -109,12 +124,15 @@ router.post('/', [auth, isTeacher], async (req, res) => {
       });
     }
 
+    // ✅ Use a local variable for the sanitized isFree value
+    const lessonIsFree = isFree !== undefined ? isFree : true;
+
     const lesson = await Lesson.create({
       title,
       content: content || '',
       duration: duration || '',
-      isFree: isFree !== undefined ? isFree : true,
-      price: isFree ? 0 : (price || 0),
+      isFree: lessonIsFree,
+      price: lessonIsFree ? 0 : (price || 0),
       order: order || 0,
       courseId: courseId,
       createdAt: new Date()
@@ -126,7 +144,6 @@ router.post('/', [auth, isTeacher], async (req, res) => {
       $push: { lessonIds: lesson._id }
     });
 
-    // ✅ Normalize the response
     const normalized = normalizeLesson(lesson);
 
     res.status(201).json({
@@ -152,11 +169,20 @@ router.post('/', [auth, isTeacher], async (req, res) => {
 // ============================================
 router.put('/:id', [auth, isTeacher], async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lesson ID format'
+      });
+    }
+
     const lesson = await Lesson.findByIdAndUpdate(
       req.params.id,
       { ...req.body, updatedAt: new Date() },
       { new: true, runValidators: true }
-    );
+    )
+      .populate('quizId')
+      .populate('multimediaIds');
 
     if (!lesson) {
       return res.status(404).json({
@@ -165,7 +191,6 @@ router.put('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Normalize
     const normalized = normalizeLesson(lesson);
 
     res.json({
@@ -190,7 +215,6 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
   try {
     console.log('🗑️ Delete lesson request:', req.params.id);
 
-    // ✅ Validate ObjectId
     if (!req.params.id || req.params.id === 'undefined') {
       return res.status(400).json({
         success: false,
