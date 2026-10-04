@@ -1,20 +1,18 @@
 // src/components/CourseCatalog.jsx
-
 import React, { useState, useEffect } from 'react';
 import {
   getCourses,
   getCurrentUser,
-  canAccessLesson,
   purchaseLesson,
   getTeacherWhatsAppUrl,
   getMultimediaByLesson,
   getLessonById,
   getCourseById,
+  apiCall,
 } from '../utils/storageAPI';
 import Quiz from './Quiz';
 import MultimediaViewer from './MultimediaViewer';
 import PaymentModal from './payments/PaymentModal';
-import { processTeacherPayment } from '../utils/teacherPaymentService';
 import './CourseCatalog.css';
 
 const CourseCatalog = ({ student, setStudent }) => {
@@ -29,26 +27,26 @@ const CourseCatalog = ({ student, setStudent }) => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lessonMultimedia, setLessonMultimedia] = useState([]);
+  const [purchasedLessons, setPurchasedLessons] = useState([]);
 
   useEffect(() => {
     loadCourses();
   }, []);
 
   // ============================================
-  // LOAD COURSES
+  // LOAD COURSES + PURCHASED LESSONS
   // ============================================
   const loadCourses = async () => {
     try {
       setIsLoading(true);
+
       const coursesData = await getCourses();
-      console.log('✅ Loaded courses:', coursesData?.length || 0);
 
       const normalizedCourses = (coursesData || []).map((course) => {
         const courseId = course.id || course._id;
         let lessons = course.lessons || course.lessonIds || [];
 
         if (Array.isArray(lessons) && lessons.length > 0 && typeof lessons[0] === 'string') {
-          console.warn('⚠️ Lessons are IDs only — backend needs to populate:', lessons);
           lessons = [];
         }
 
@@ -74,6 +72,20 @@ const CourseCatalog = ({ student, setStudent }) => {
       });
 
       setCourses(publishedCourses);
+
+      // ✅ Load purchased lesson IDs for lock checks
+      const currentUser = getCurrentUser();
+      if (currentUser?.id) {
+        try {
+          const response = await apiCall('/lessons/purchased');
+          setPurchasedLessons(response.lessonIds || []);
+          console.log('📋 Purchased lessons:', response.lessonIds);
+        } catch (err) {
+          console.warn('Failed to load purchased lessons:', err.message);
+          setPurchasedLessons([]);
+        }
+      }
+
       setError(null);
     } catch (err) {
       console.error('❌ Error loading courses:', err);
@@ -121,7 +133,6 @@ const CourseCatalog = ({ student, setStudent }) => {
       if (!obj || typeof obj !== 'object') return [];
       return Object.entries(obj);
     } catch (err) {
-      console.error('Error in safeObjectEntries:', err);
       return [];
     }
   };
@@ -131,7 +142,6 @@ const CourseCatalog = ({ student, setStudent }) => {
       if (!obj || typeof obj !== 'object') return [];
       return Object.keys(obj);
     } catch (err) {
-      console.error('Error in safeObjectKeys:', err);
       return [];
     }
   };
@@ -154,6 +164,15 @@ const CourseCatalog = ({ student, setStudent }) => {
 
   const collapseAllCourses = () => {
     setExpandedCourses({});
+  };
+
+  // ✅ Synchronous access check — uses purchasedLessons state
+  const checkHasAccess = (lesson) => {
+    if (!lesson) return false;
+    if (lesson.isFree === true) return true;
+
+    const lessonId = lesson.id || lesson._id;
+    return purchasedLessons.includes(lessonId) || purchasedLessons.includes(lesson._id);
   };
 
   // ============================================
@@ -213,50 +232,44 @@ const CourseCatalog = ({ student, setStudent }) => {
   };
 
   // ============================================
-  // LESSON PURCHASE
+  // LESSON PURCHASE — Opens payment modal
   // ============================================
-  const handlePurchaseLesson = async (courseKey, lessonIndex) => {
-    try {
-      setIsLoading(true);
-      const currentUser = getCurrentUser();
-      if (!currentUser) {
-        alert('Please log in to purchase lessons');
-        setIsLoading(false);
-        return;
-      }
-
-      const course = courses[courseKey];
-      const lesson = course.lessons?.[lessonIndex];
-
-      if (!lesson) {
-        console.error('Lesson not found');
-        setIsLoading(false);
-        return;
-      }
-
-      if (window.confirm(`Are you sure you want to purchase "${lesson.title}" for ₦${lesson.price}?`)) {
-        const paymentResult = await purchaseLesson(currentUser.id, courseKey, lesson.id);
-
-        if (paymentResult?.success || paymentResult === true) {
-          alert('✅ Payment successful! You now have access to this lesson.');
-          loadCourses();
-          setSelectedCourse(courseKey);
-          setCurrentLesson(lessonIndex);
-          await loadLessonMultimedia(courseKey, lesson.id);
-        } else {
-          alert('❌ Payment failed. Please try again.');
-        }
-      }
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error purchasing lesson:', error);
-      alert('❌ Error processing payment: ' + error.message);
-      setIsLoading(false);
+  const handlePurchaseLesson = (courseKey, lessonIndex) => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      alert('Please log in to purchase lessons');
+      return;
     }
+
+    const course = courses[courseKey];
+    const lesson = course?.lessons?.[lessonIndex];
+
+    if (!lesson) {
+      console.error('Lesson not found');
+      return;
+    }
+
+    console.log('💳 Opening payment modal for:', lesson.title);
+
+    // ✅ Set the lesson and open the modal
+    setSelectedLesson({
+      courseKey,
+      lessonIndex,
+      lesson: {
+        ...lesson,
+        title: lesson.title || 'Untitled Lesson',
+        courseId: courseKey,
+        price: lesson.price || 500,
+        teacherId: course.teacherId || lesson.teacherId || 'default_teacher',
+        teacherName: course.teacherName || 'Course Teacher',
+      },
+    });
+
+    setShowPaymentModal(true);
   };
 
   // ============================================
-  // START LESSON (also handles reopening completed lessons)
+  // START LESSON
   // ============================================
   const handleStartLesson = async (courseKey, lessonIndex) => {
     try {
@@ -276,8 +289,11 @@ const CourseCatalog = ({ student, setStudent }) => {
         return;
       }
 
-      // Paid lesson — needs purchase
-      if (!lesson.isFree && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
+      // ✅ Synchronous check
+      const hasAccess = checkHasAccess(lesson);
+
+      if (!hasAccess) {
+        // ✅ Open payment modal instead of calling purchaseLesson directly
         setSelectedLesson({
           courseKey,
           lessonIndex,
@@ -286,7 +302,7 @@ const CourseCatalog = ({ student, setStudent }) => {
             title: lesson.title || 'Untitled Lesson',
             courseId: courseKey,
             price: lesson.price || 500,
-            teacherId: course.teacherId || 'default_teacher',
+            teacherId: course.teacherId || lesson.teacherId || 'default_teacher',
             teacherName: course.teacherName || 'Course Teacher',
           },
         });
@@ -294,24 +310,7 @@ const CourseCatalog = ({ student, setStudent }) => {
         return;
       }
 
-      if (lesson.isLocked && !canAccessLesson(currentUser.id, courseKey, lesson.id)) {
-        setSelectedLesson({
-          courseKey,
-          lessonIndex,
-          lesson: {
-            ...lesson,
-            title: lesson.title || 'Untitled Lesson',
-            courseId: courseKey,
-            price: lesson.price || 500,
-            teacherId: course.teacherId || 'default_teacher',
-            teacherName: course.teacherName || 'Course Teacher',
-          },
-        });
-        setShowPaymentModal(true);
-        return;
-      }
-
-      // ✅ Free or purchased — open lesson (even if already completed)
+      // ✅ User has access — open the lesson
       setSelectedCourse(courseKey);
       setCurrentLesson(lessonIndex);
       setShowQuiz(false);
@@ -339,38 +338,39 @@ const CourseCatalog = ({ student, setStudent }) => {
       console.log('✅ Payment successful:', paymentData);
 
       if (selectedLesson) {
-        const teacherPaymentSuccess = await processTeacherPayment(
-          paymentData,
-          selectedLesson.lesson,
-          student
+        const lessonId = selectedLesson.lesson.id || selectedLesson.lesson._id;
+
+        // ✅ 1. Mark lesson as purchased on the backend
+        await purchaseLesson(
+          getCurrentUser()?.id,
+          selectedLesson.courseKey,
+          lessonId
         );
 
-        loadCourses();
+        // ✅ 2. Add to purchasedLessons so lock clears immediately
+        setPurchasedLessons((prev) =>
+          prev.includes(lessonId) ? prev : [...prev, lessonId]
+        );
 
+        // ✅ 3. Reload courses to refresh
+        await loadCourses();
+
+        // ✅ 4. Load lesson multimedia
+        await loadLessonMultimedia(selectedLesson.courseKey, lessonId);
+
+        // ✅ 5. Select the newly unlocked lesson
         setSelectedCourse(selectedLesson.courseKey);
         setCurrentLesson(selectedLesson.lessonIndex);
         setShowPaymentModal(false);
         setSelectedLesson(null);
 
-        await loadLessonMultimedia(selectedLesson.courseKey, selectedLesson.lesson.id);
-
-        if (teacherPaymentSuccess) {
-          alert('🎉 Payment successful! Lesson unlocked.');
-        } else {
-          alert('🎉 Payment successful! Lesson unlocked.');
-        }
+        alert('🎉 Payment successful! Lesson unlocked.');
       }
-      setIsLoading(false);
     } catch (error) {
-      console.error('❌ Error processing teacher payment:', error);
-
-      setSelectedCourse(selectedLesson?.courseKey);
-      setCurrentLesson(selectedLesson?.lessonIndex);
-      setShowPaymentModal(false);
-      setSelectedLesson(null);
+      console.error('❌ handlePaymentSuccess error:', error);
+      alert('Payment succeeded, but unlock failed. Please refresh.');
+    } finally {
       setIsLoading(false);
-
-      alert('🎉 Payment successful! Lesson unlocked.');
     }
   };
 
@@ -379,13 +379,10 @@ const CourseCatalog = ({ student, setStudent }) => {
   // ============================================
   const completeLesson = async (courseKey, lessonId) => {
     try {
-      console.log('🎯 Complete Lesson clicked:', { courseKey, lessonId });
-
       if (!courses || !courses[courseKey]) return;
       if (!lessonId) return;
 
       const lessonKey = `${courseKey}-${lessonId}`;
-
       if (student.completedLessons?.includes(lessonKey)) return;
 
       const updatedStudent = { ...student };
@@ -423,7 +420,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   const getTeacherContactUrl = (teacherId) => getTeacherWhatsAppUrl(teacherId);
 
   // ============================================
-  // NAVIGATE TO ANOTHER LESSON
+  // NAVIGATE TO LESSON
   // ============================================
   const goToLesson = async (newIndex) => {
     const course = courses[selectedCourse];
@@ -444,7 +441,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   };
 
   // ============================================
-  // RENDER — EMPTY STATE
+  // EMPTY STATE
   // ============================================
   const courseEntries = safeObjectEntries(courses);
   if (courseEntries.length === 0) {
@@ -467,7 +464,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   }
 
   // ============================================
-  // RENDER — LESSON VIEW
+  // LESSON VIEW
   // ============================================
   if (selectedCourse && courses[selectedCourse]) {
     const course = courses[selectedCourse];
@@ -488,10 +485,7 @@ const CourseCatalog = ({ student, setStudent }) => {
     }
 
     const isCompleted = student.completedLessons?.includes(`${selectedCourse}-${lesson.id}`);
-    const currentUser = getCurrentUser();
-    const hasAccess = currentUser
-      ? canAccessLesson(currentUser.id, selectedCourse, lesson.id)
-      : false;
+    const hasAccess = checkHasAccess(lesson);
 
     return (
       <div className="course-lesson">
@@ -554,7 +548,6 @@ const CourseCatalog = ({ student, setStudent }) => {
               <p><strong>Duration:</strong> {lesson.duration}</p>
             </div>
 
-            {/* ✅ Quiz — hidden if already completed */}
             {lesson.quiz && !showQuiz && (
               <div className="quiz-section">
                 <h3>Knowledge Test</h3>
@@ -595,7 +588,6 @@ const CourseCatalog = ({ student, setStudent }) => {
           </>
         )}
 
-        {/* ✅ Lesson Navigation */}
         <div className="lesson-navigation">
           {currentLesson > 0 && (
             <button onClick={() => goToLesson(currentLesson - 1)}>
@@ -606,7 +598,7 @@ const CourseCatalog = ({ student, setStudent }) => {
           <button
             onClick={() => completeLesson(selectedCourse, lesson.id || lesson._id)}
             className="complete-btn"
-            disabled={isCompleted || (!hasAccess && !lesson.isFree) || isLoading}
+            disabled={isCompleted || !hasAccess || isLoading}
           >
             {isCompleted ? 'Completed ✓' : 'Complete Lesson'}
           </button>
@@ -622,7 +614,7 @@ const CourseCatalog = ({ student, setStudent }) => {
   }
 
   // ============================================
-  // RENDER — COURSE CATALOG (main view)
+  // CATALOG VIEW
   // ============================================
   return (
     <div className="course-catalog">
@@ -643,7 +635,6 @@ const CourseCatalog = ({ student, setStudent }) => {
 
       <div className="courses-grid">
         {courseEntries.map(([key, course]) => {
-          const currentUser = getCurrentUser();
           const paidLessonsCount = course.lessons?.filter((l) => !l.isFree).length || 0;
           const freeLessonsCount = course.lessons?.filter((l) => l.isFree).length || 0;
 
@@ -710,9 +701,7 @@ const CourseCatalog = ({ student, setStudent }) => {
                 <div className="lessons-list">
                   {course.lessons?.map((lesson, index) => {
                     const isLessonCompleted = student.completedLessons?.includes(`${key}-${lesson.id}`);
-                    const hasAccess = currentUser
-                      ? canAccessLesson(currentUser.id, key, lesson.id)
-                      : false;
+                    const hasAccess = checkHasAccess(lesson);
                     const isPaidLesson = !lesson.isFree;
 
                     return (
@@ -737,16 +726,12 @@ const CourseCatalog = ({ student, setStudent }) => {
                           </div>
                           <div className="lesson-features">
                             {lesson.multimedia && lesson.multimedia.length > 0 && (
-                              <span className="media-indicator" title="Has learning materials">🎬</span>
+                              <span className="media-indicator">🎬</span>
                             )}
-                            {lesson.quiz && (
-                              <span className="quiz-indicator" title="Has quiz questions">📝</span>
-                            )}
-                            {isLessonCompleted && (
-                              <span className="completion-indicator" title="Lesson completed">✅</span>
-                            )}
+                            {lesson.quiz && <span className="quiz-indicator">📝</span>}
+                            {isLessonCompleted && <span className="completion-indicator">✅</span>}
                             {isPaidLesson && !hasAccess && (
-                              <span className="lock-indicator" title="Paid lesson">💰</span>
+                              <span className="lock-indicator">💰</span>
                             )}
                           </div>
                         </div>
