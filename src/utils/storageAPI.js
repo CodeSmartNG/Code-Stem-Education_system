@@ -440,29 +440,43 @@ export const uploadFileToFirebase = uploadFile;
 // LESSON ACCESS & PURCHASE
 // ============================================
 
+/**
+ * Check if a user can access a lesson
+ * Free lessons → always true
+ * Purchased lessons → check backend
+ */
 export const canAccessLesson = async (userId, courseKey, lessonId) => {
   try {
-    // ✅ Guard against missing userId
-    if (!userId) {
-      return false;
-    }
+    if (!userId || !lessonId) return false;
 
     const response = await apiCall(
       `/lessons/${lessonId}/access?userId=${userId}&courseKey=${courseKey}`
     );
-    return response.hasAccess || false;
+
+    return response.hasAccess || response.data?.hasAccess || false;
   } catch (error) {
-    console.error('Error checking access:', error);
+    // Not an error — just means user hasn't purchased
+    console.warn('Access check failed:', error.message);
     return false;
   }
 };
 
+/**
+ * Mark a lesson as purchased for a user
+ * (Called AFTER payment is verified by the backend)
+ */
 export const purchaseLesson = async (userId, courseKey, lessonId) => {
   try {
-    const response = await api.purchaseLesson({ userId, courseKey, lessonId });
-    return response.success;
+    console.log('🛒 purchaseLesson:', { userId, courseKey, lessonId });
+
+    const response = await apiCall('/lessons/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ userId, courseKey, lessonId }),
+    });
+
+    return response.success || response.data?.success || false;
   } catch (error) {
-    console.error('Error purchasing lesson:', error);
+    console.error('❌ Error purchasing lesson:', error);
     throw error;
   }
 };
