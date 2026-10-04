@@ -22,6 +22,8 @@ const uploadRoutes = require('./routes/upload');
 const multimediaRoutes = require('./routes/multimedia');
 const quizRoutes = require('./routes/quizzes');
 const notificationRoutes = require('./routes/notifications');
+const paymentRoutes = require('./routes/payments');
+
 
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
@@ -56,6 +58,8 @@ app.use(cors({
 }));
 
 app.use(morgan('dev'));
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);   // ← ADD THIS LINE
 app.use(express.json({ limit: '100mb' }));           // ✅ Large payloads for video metadata
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
