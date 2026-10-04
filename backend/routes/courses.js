@@ -6,6 +6,10 @@ const Course = require('../models/Course');
 const User = require('../models/User');
 const Lesson = require('../models/Lesson');
 
+// ✅ Make sure Quiz + Multimedia models are registered so populate doesn't crash
+require('../models/Quiz');
+require('../models/Multimedia');
+
 const router = express.Router();
 
 // ============================================
@@ -58,6 +62,72 @@ router.post('/', [
 });
 
 // ============================================
+// HELPER — Safe populate with fallback
+// ============================================
+const fetchCoursesWithFallback = async (query) => {
+  try {
+    // ✅ Try full nested populate first
+    return await Course.find(query)
+      .populate('teacherId', 'name email whatsappNumber')
+      .populate({
+        path: 'lessonIds',
+        populate: [
+          { path: 'quizId' },
+          { path: 'multimediaIds' }
+        ]
+      })
+      .sort({ createdAt: -1 });
+  } catch (populateError) {
+    console.error('⚠️ Nested populate failed:', populateError.message);
+    console.error('⚠️ Retrying WITHOUT nested populate...');
+
+    // ✅ Fallback — populate lessons only, no nested
+    return await Course.find(query)
+      .populate('teacherId', 'name email whatsappNumber')
+      .populate('lessonIds')
+      .sort({ createdAt: -1 });
+  }
+};
+
+// ============================================
+// HELPER — Normalize course + lessons
+// ============================================
+const normalizeCourse = (course) => {
+  const obj = course.toObject();
+  obj.id = obj._id.toString();
+  obj._id = obj._id.toString();
+
+  if (Array.isArray(obj.lessonIds)) {
+    obj.lessons = obj.lessonIds
+      // ✅ Drop any lessons that failed to populate (became null)
+      .filter((lesson) => lesson && typeof lesson === 'object')
+      .map((lesson) => {
+        const lessonObj = {
+          ...lesson,
+          id: lesson._id ? lesson._id.toString() : lesson.id,
+          _id: lesson._id ? lesson._id.toString() : lesson._id
+        };
+
+        // ✅ Alias — only if populated as an object
+        lessonObj.quiz =
+          lesson.quizId && typeof lesson.quizId === 'object'
+            ? lesson.quizId
+            : null;
+
+        if (Array.isArray(lesson.multimediaIds)) {
+          lessonObj.multimedia = lesson.multimediaIds;
+        }
+
+        return lessonObj;
+      });
+  } else {
+    obj.lessons = [];
+  }
+
+  return obj;
+};
+
+// ============================================
 // GET ALL COURSES
 // GET /api/courses
 // ============================================
@@ -75,45 +145,12 @@ router.get('/', auth, async (req, res) => {
     console.log('👤 Role:', req.user.role);
     console.log('📋 Query:', JSON.stringify(query));
 
-    const courses = await Course.find(query)
-      .populate('teacherId', 'name email whatsappNumber')
-      .populate({
-        path: 'lessonIds',
-        populate: { path: 'quizId' }
-      })
-      .sort({ createdAt: -1 });
+    const courses = await fetchCoursesWithFallback(query);
 
     console.log('✅ Courses found:', courses.length);
     console.log('=========================\n');
 
-    // Normalize + alias quizId → quiz
-    const normalizedCourses = courses.map(course => {
-      const obj = course.toObject();
-      obj.id = obj._id.toString();
-      obj._id = obj._id.toString();
-
-      if (obj.lessonIds && Array.isArray(obj.lessonIds)) {
-        obj.lessons = obj.lessonIds.map(lesson => {
-          const lessonObj = {
-            ...lesson,
-            id: lesson._id ? lesson._id.toString() : lesson.id,
-            _id: lesson._id ? lesson._id.toString() : lesson._id
-          };
-
-          lessonObj.quiz = lesson.quizId || null;
-
-          if (Array.isArray(lesson.multimediaIds)) {
-            lessonObj.multimedia = lesson.multimediaIds;
-          }
-
-          return lessonObj;
-        });
-      } else {
-        obj.lessons = [];
-      }
-
-      return obj;
-    });
+    const normalizedCourses = courses.map(normalizeCourse);
 
     return res.json({
       success: true,
@@ -121,9 +158,8 @@ router.get('/', auth, async (req, res) => {
       courses: normalizedCourses,
       data: normalizedCourses
     });
-
   } catch (error) {
-    console.error('Get courses error:', error);
+    console.error('❌ Get courses error:', error);
     return res.status(500).json({
       success: false,
       message: error.message
@@ -137,12 +173,24 @@ router.get('/', auth, async (req, res) => {
 // ============================================
 router.get('/:id', auth, async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id)
-      .populate('teacherId', 'name email whatsappNumber')
-      .populate({
-        path: 'lessonIds',
-        populate: { path: 'quizId' }
-      });
+    let course;
+
+    try {
+      course = await Course.findById(req.params.id)
+        .populate('teacherId', 'name email whatsappNumber')
+        .populate({
+          path: 'lessonIds',
+          populate: [
+            { path: 'quizId' },
+            { path: 'multimediaIds' }
+          ]
+        });
+    } catch (populateError) {
+      console.error('⚠️ Nested populate failed for single course:', populateError.message);
+      course = await Course.findById(req.params.id)
+        .populate('teacherId', 'name email whatsappNumber')
+        .populate('lessonIds');
+    }
 
     if (!course) {
       return res.status(404).json({
@@ -154,7 +202,7 @@ router.get('/:id', auth, async (req, res) => {
     // Auto-enroll student on first access
     if (req.user.role === 'student') {
       const alreadyEnrolled = course.enrolledStudentIds?.some(
-        id => id.toString() === req.user._id.toString()
+        (id) => id.toString() === req.user._id.toString()
       );
 
       if (!alreadyEnrolled) {
@@ -166,36 +214,14 @@ router.get('/:id', auth, async (req, res) => {
       }
     }
 
-    const courseObj = course.toObject();
-    courseObj.id = courseObj._id.toString();
-    courseObj._id = courseObj._id.toString();
-
-    if (Array.isArray(courseObj.lessonIds)) {
-      courseObj.lessons = courseObj.lessonIds.map(lesson => {
-        const lessonObj = {
-          ...lesson,
-          id: lesson._id ? lesson._id.toString() : lesson.id,
-          _id: lesson._id ? lesson._id.toString() : lesson._id
-        };
-
-        lessonObj.quiz = lesson.quizId || null;
-
-        if (Array.isArray(lesson.multimediaIds)) {
-          lessonObj.multimedia = lesson.multimediaIds;
-        }
-
-        return lessonObj;
-      });
-    } else {
-      courseObj.lessons = [];
-    }
+    const courseObj = normalizeCourse(course);
 
     res.json({
       success: true,
       data: courseObj
     });
   } catch (error) {
-    console.error('Get course error:', error);
+    console.error('❌ Get course error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -283,7 +309,7 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
 });
 
 // ============================================
-// PUBLISH/UNPUBLISH
+// PUBLISH / UNPUBLISH
 // PATCH /api/courses/:id/publish
 // ============================================
 router.patch('/:id/publish', [auth, isTeacher], async (req, res) => {
@@ -313,7 +339,9 @@ router.patch('/:id/publish', [auth, isTeacher], async (req, res) => {
     res.json({
       success: true,
       data: course,
-      message: isPublished ? 'Course published successfully' : 'Course unpublished successfully'
+      message: isPublished
+        ? 'Course published successfully'
+        : 'Course unpublished successfully'
     });
   } catch (error) {
     console.error('Publish course error:', error);
