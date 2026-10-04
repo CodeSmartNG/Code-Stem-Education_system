@@ -3,7 +3,7 @@
 import { api } from './api';
 
 // Helper for direct API calls
-const apiCall = async (endpoint, options = {}) => {
+export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
