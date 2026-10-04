@@ -99,16 +99,30 @@ const normalizeCourse = (course) => {
 
   if (Array.isArray(obj.lessonIds)) {
     obj.lessons = obj.lessonIds
-      // ✅ Drop any lessons that failed to populate (became null)
       .filter((lesson) => lesson && typeof lesson === 'object')
       .map((lesson) => {
+        // ✅ Robust boolean coercion — handles true, 1, "true", etc.
+        const isFreeRaw = lesson.isFree;
+        const isFree =
+          isFreeRaw === true ||
+          isFreeRaw === 1 ||
+          isFreeRaw === 'true' ||
+          isFreeRaw === '1';
+
+        const priceRaw = lesson.price;
+        const price =
+          typeof priceRaw === 'number'
+            ? priceRaw
+            : parseInt(priceRaw, 10) || 0;
+
         const lessonObj = {
           ...lesson,
           id: lesson._id ? lesson._id.toString() : lesson.id,
-          _id: lesson._id ? lesson._id.toString() : lesson._id
+          _id: lesson._id ? lesson._id.toString() : lesson._id,
+          isFree,          // ✅ Always a real boolean
+          price,           // ✅ Always a number
         };
 
-        // ✅ Alias — only if populated as an object
         lessonObj.quiz =
           lesson.quizId && typeof lesson.quizId === 'object'
             ? lesson.quizId
@@ -126,7 +140,6 @@ const normalizeCourse = (course) => {
 
   return obj;
 };
-
 // ============================================
 // GET ALL COURSES
 // GET /api/courses
