@@ -5,6 +5,7 @@ const router = express.Router();
 
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
+const User = require('../models/User');      // ✅ NEW — needed for purchase/access
 const { auth, isTeacher } = require('../middleware/auth');
 
 // ============================================
@@ -14,7 +15,6 @@ const normalizeLesson = (lesson) => {
   const obj = lesson.toObject ? lesson.toObject() : lesson;
   const id = obj._id ? obj._id.toString() : obj.id;
 
-  // ✅ Alias quizId → quiz for frontend compatibility
   const normalized = {
     ...obj,
     id: id,
@@ -36,8 +36,8 @@ router.get('/', auth, async (req, res) => {
     const query = courseId ? { courseId } : {};
 
     const lessons = await Lesson.find(query)
-      .populate('quizId')          // ✅ Populate quiz
-      .populate('multimediaIds')   // ✅ Populate multimedia
+      .populate('quizId')
+      .populate('multimediaIds')
       .sort({ order: 1 });
 
     const normalizedLessons = lessons.map(normalizeLesson);
@@ -58,6 +58,107 @@ router.get('/', auth, async (req, res) => {
 });
 
 // ============================================
+// ✅ NEW — Check if user has access to a lesson
+// GET /api/lessons/:id/access?userId=xxx&courseKey=yyy
+// ============================================
+router.get('/:id/access', auth, async (req, res) => {
+  try {
+    const { userId, courseKey } = req.query;
+    const lessonId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) {
+      return res.status(400).json({ success: false, hasAccess: false, message: 'Invalid lesson ID' });
+    }
+
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) {
+      return res.status(404).json({ success: false, hasAccess: false, message: 'Lesson not found' });
+    }
+
+    // Free lessons are always accessible
+    if (lesson.isFree) {
+      return res.json({ success: true, hasAccess: true });
+    }
+
+    if (!userId) {
+      return res.json({ success: true, hasAccess: false });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.json({ success: true, hasAccess: false });
+    }
+
+    // ✅ Check if lesson is in user's purchasedLessons array
+    const hasAccess = (user.purchasedLessons || []).some((p) => {
+      const pid = p.lessonId?._id || p.lessonId;
+      return pid?.toString() === lessonId;
+    });
+
+    return res.json({ success: true, hasAccess });
+  } catch (error) {
+    console.error('Access check error:', error);
+    return res.status(500).json({ success: false, hasAccess: false, message: error.message });
+  }
+});
+
+// ============================================
+// ✅ NEW — Mark lesson as purchased
+// POST /api/lessons/purchase
+// ============================================
+router.post('/purchase', auth, async (req, res) => {
+  try {
+    const { userId, courseKey, lessonId } = req.body;
+
+    console.log('\n🛒 ===== PURCHASE LESSON =====');
+    console.log('👤 Auth user:', req.user._id);
+    console.log('📥 Body:', { userId, courseKey, lessonId });
+
+    if (!lessonId) {
+      return res.status(400).json({ success: false, message: 'lessonId is required' });
+    }
+
+    // Trust the authenticated user's ID, not the body's
+    const realUserId = req.user._id;
+
+    const user = await User.findById(realUserId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.purchasedLessons = user.purchasedLessons || [];
+
+    // Idempotency — already purchased?
+    const alreadyPurchased = user.purchasedLessons.some((p) => {
+      const pid = p.lessonId?._id || p.lessonId;
+      return pid?.toString() === lessonId;
+    });
+
+    if (alreadyPurchased) {
+      return res.json({
+        success: true,
+        message: 'Lesson already purchased',
+        alreadyOwned: true
+      });
+    }
+
+    user.purchasedLessons.push({
+      lessonId,
+      courseKey,
+      purchasedAt: new Date()
+    });
+
+    await user.save();
+    console.log('✅ Lesson added to purchasedLessons:', lessonId);
+
+    return res.json({ success: true, message: 'Lesson purchased successfully' });
+  } catch (error) {
+    console.error('❌ Purchase error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================
 // GET single lesson by ID
 // GET /api/lessons/:id
 // ============================================
@@ -71,8 +172,8 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     const lesson = await Lesson.findById(req.params.id)
-      .populate('quizId')          // ✅ Populate quiz
-      .populate('multimediaIds');  // ✅ Populate multimedia
+      .populate('quizId')
+      .populate('multimediaIds');
 
     if (!lesson) {
       return res.status(404).json({
@@ -124,7 +225,6 @@ router.post('/', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Use a local variable for the sanitized isFree value
     const lessonIsFree = isFree !== undefined ? isFree : true;
 
     const lesson = await Lesson.create({
@@ -259,9 +359,6 @@ router.delete('/:id', [auth, isTeacher], async (req, res) => {
   }
 });
 
-
-
-
 // ============================================
 // CREATE/ATTACH QUIZ to a lesson
 // POST /api/lessons/:id/quiz
@@ -273,7 +370,6 @@ router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
     console.log('📥 Lesson ID:', req.params.id);
     console.log('📥 Quiz payload:', JSON.stringify(req.body, null, 2));
 
-    // ✅ Validate lesson ID
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
         success: false,
@@ -289,7 +385,6 @@ router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Validate quiz payload
     const { title, passingScore, questions } = req.body;
     if (!questions || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({
@@ -298,19 +393,28 @@ router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    // ✅ Create the Quiz document
     const Quiz = require('../models/Quiz');
+
+    // ✅ Ensure every question has an id (schema requires it)
+    const sanitizedQuestions = questions.map((q, idx) => ({
+      id: q.id !== undefined ? q.id : Date.now() + idx,
+      question: q.question,
+      type: q.type || 'text',
+      imageUrl: q.imageUrl || '',
+      options: q.options,
+      correctAnswer: q.correctAnswer
+    }));
+
     const quiz = await Quiz.create({
       lessonId: lesson._id,
       courseId: lesson.courseId,
       title: title || 'Lesson Quiz',
       passingScore: passingScore || 70,
-      questions: questions
+      questions: sanitizedQuestions
     });
 
     console.log('✅ Quiz created:', quiz._id);
 
-    // ✅ Attach quiz to lesson
     lesson.quizId = quiz._id;
     lesson.updatedAt = new Date();
     await lesson.save();
@@ -332,4 +436,5 @@ router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
     });
   }
 });
+
 module.exports = router;
