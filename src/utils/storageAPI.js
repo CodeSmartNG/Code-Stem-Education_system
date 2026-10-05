@@ -1,16 +1,18 @@
 // src/utils/storageAPI.js
 
-import { api, apiCall } from './api';
+import { api } from './api';
 
 // Helper for direct API calls
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL =
+    import.meta.env.VITE_API_URL ||
+    'https://code-stem-education-system.onrender.com/api';
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-    ...options.headers
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
   };
 
   const config = { ...options, headers };
