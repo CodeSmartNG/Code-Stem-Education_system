@@ -2,7 +2,8 @@
   "name": "codesmartng-stem",
   "overrides": {
     "react-paystack": {
-      "react": "$react"
+      "react": "$react",
+      "react-dom": "$react-dom"
     }
   },
   "private": true,
