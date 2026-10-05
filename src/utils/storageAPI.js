@@ -1,6 +1,6 @@
 // src/utils/storageAPI.js
 
-import { api } from './api';
+import { api, apiCall } from './api';
 
 // Helper for direct API calls
 export const apiCall = async (endpoint, options = {}) => {
