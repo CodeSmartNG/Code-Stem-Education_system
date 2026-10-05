@@ -13,7 +13,7 @@ console.log('🌍 Environment:', import.meta.env.MODE);
 const getToken = () => localStorage.getItem('token');
 
 // Helper for API calls
-const apiCall = async (endpoint, options = {}) => {
+export const apiCall = async (endpoint, options = {}) => {
   const token = getToken();
 
   const defaultHeaders = {
