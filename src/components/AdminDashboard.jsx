@@ -1,5 +1,4 @@
 // src/components/AdminDashboard.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   getCurrentUser,
@@ -20,7 +19,6 @@ import {
   rejectTeacher,
   dismissTeacher,
 } from '../utils/storageAPI';
-
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ currentUser, setCurrentView }) => {
