@@ -1,6 +1,6 @@
 // src/components/payments/PaystackPayment.jsx
 import React from 'react';
-import { usePaystackPayment } from 'react-paystack-19';
+import { usePaystackPayment } from 'react-paystack';
 import { apiCall } from '../../utils/storageAPI'; // adjust path if needed
 
 const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
