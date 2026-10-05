@@ -2,34 +2,6 @@
 
 import { api } from './api';
 
-// Helper for direct API calls
-export const apiCall = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('token');
-  const API_URL =
-    import.meta.env.VITE_API_URL ||
-    'https://code-stem-education-system.onrender.com/api';
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const config = { ...options, headers };
-
-  if (options.body instanceof FormData) {
-    delete config.headers['Content-Type'];
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, config);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
-  }
-
-  return data;
-};
 
 // ============================================
 // INITIALIZATION
