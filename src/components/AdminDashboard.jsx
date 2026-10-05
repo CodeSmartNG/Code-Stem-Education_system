@@ -20,7 +20,7 @@ import {
   rejectTeacher,
   dismissTeacher,
 } from '../utils/storageAPI';
-import paymentService from '../utils/paymentService';
+
 import './AdminDashboard.css';
 
 const AdminDashboard = ({ currentUser, setCurrentView }) => {
