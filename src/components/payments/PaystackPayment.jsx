@@ -1,11 +1,23 @@
 // src/components/payments/PaystackPayment.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePaystackPayment } from 'react-paystack';
-import { apiCall } from '../../utils/storageAPI'; // adjust path if needed
-
+import { apiCall, getCurrentUser } from '../../utils/storageAPI';
 const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
   // ✅ Vite env var
-  const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
+  // ✅ Fetch current user for a reliable email
+  const [currentUser, setCurrentUser] = useState(student || null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const u = await getCurrentUser();
+      if (u) setCurrentUser(u);
+    };
+    if (!student?.email) {
+      fetchUser();
+    }
+  }, [student]);
 
   if (!publicKey) {
     console.error('❌ VITE_PAYSTACK_PUBLIC_KEY is not set');
@@ -18,35 +30,51 @@ const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
     );
   }
 
-  // ✅ Unique reference with lesson + student + timestamp
-  const reference = `lesson_${lesson.id}_${student.id}_${Date.now()}`;
 
-  const config = {
-    reference,
-    email: student.email,
-    amount: Math.round(lesson.price * 100), // kobo
-    publicKey,
-    currency: 'NGN',
-    metadata: {
-      custom_fields: [
-        {
-          display_name: 'Student Name',
-          variable_name: 'student_name',
-          value: student.name || 'Student',
-        },
-        {
-          display_name: 'Lesson',
-          variable_name: 'lesson_title',
-          value: lesson.title || 'Lesson',
-        },
-        {
-          display_name: 'Course',
-          variable_name: 'course_id',
-          value: lesson.courseId || '',
-        },
-      ],
-    },
-  };
+// ✅ Resolve email safely
+const userEmail = student?.email || currentUser?.email || 'student@example.com';
+const userName = student?.name || currentUser?.name || 'Student';
+const userId = student?.id || currentUser?.id || 'unknown';
+  
+  // ✅ Unique reference with lesson + student + timestamp
+  // ✅ Resolve reliable values with fallbacks
+const userEmail = student?.email || currentUser?.email || 'student@example.com';
+const userName = student?.name || currentUser?.name || 'Student';
+const userId =
+  student?.id ||
+  student?._id ||
+  currentUser?.id ||
+  currentUser?._id ||
+  'unknown';
+
+const reference = `lesson_${lesson.id}_${userId}_${Date.now()}`;
+
+const config = {
+  reference,
+  email: userEmail,
+  amount: Math.round(lesson.price * 100), // kobo
+  publicKey,
+  currency: 'NGN',
+  metadata: {
+    custom_fields: [
+      {
+        display_name: 'Student Name',
+        variable_name: 'student_name',
+        value: userName,
+      },
+      {
+        display_name: 'Lesson',
+        variable_name: 'lesson_title',
+        value: lesson.title || 'Lesson',
+      },
+      {
+        display_name: 'Course',
+        variable_name: 'course_id',
+        value: lesson.courseId || '',
+      },
+    ],
+  },
+};
 
   const initializePayment = usePaystackPayment(config);
 
