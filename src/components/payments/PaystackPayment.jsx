@@ -88,10 +88,38 @@ const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
     onClose();
   };
 
-  return (
+    return (
     <div className="paystack-payment">
       <button
-        onClick={() => initializePayment({ onSuccess: handlePaymentSuccess, onClose: handlePaymentClose })}
+        onClick={() => {
+          // 🐛 DEBUG — show what's happening
+          const debugInfo = [
+            '🎯 Button tapped!',
+            '',
+            'Public Key: ' + (publicKey ? publicKey.substring(0, 20) + '...' : 'MISSING'),
+            'Amount (kobo): ' + config.amount,
+            'Email: ' + config.email,
+            'Reference: ' + reference,
+            'initializePayment: ' + typeof initializePayment,
+            'PaystackPop loaded: ' + (typeof window.PaystackPop !== 'undefined'),
+          ].join('\n');
+          
+          alert(debugInfo);
+
+          // Try to call it
+          try {
+            if (typeof initializePayment !== 'function') {
+              alert('❌ initializePayment is not a function! It is: ' + typeof initializePayment);
+              return;
+            }
+            initializePayment({ 
+              onSuccess: handlePaymentSuccess, 
+              onClose: handlePaymentClose 
+            });
+          } catch (err) {
+            alert('❌ Error calling initializePayment:\n' + err.message);
+          }
+        }}
         className="payment-btn paystack-btn"
       >
         Pay ₦{lesson.price} with Paystack
