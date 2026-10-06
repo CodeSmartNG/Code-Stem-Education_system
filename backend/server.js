@@ -71,8 +71,49 @@ app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ============================================
+// ✅ STATIC FILES — with correct MIME types
+// ============================================
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res, filePath) => {
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (ext === '.mp4') {
+        res.setHeader('Content-Type', 'video/mp4');
+      } else if (ext === '.webm') {
+        res.setHeader('Content-Type', 'video/webm');
+      } else if (ext === '.ogg' || ext === '.ogv') {
+        res.setHeader('Content-Type', 'video/ogg');
+      } else if (ext === '.mov') {
+        res.setHeader('Content-Type', 'video/quicktime');
+      } else if (ext === '.mkv') {
+        res.setHeader('Content-Type', 'video/x-matroska');
+      } else if (ext === '.mp3') {
+        res.setHeader('Content-Type', 'audio/mpeg');
+      } else if (ext === '.wav') {
+        res.setHeader('Content-Type', 'audio/wav');
+      } else if (ext === '.pdf') {
+        res.setHeader('Content-Type', 'application/pdf');
+      } else if (ext === '.png') {
+        res.setHeader('Content-Type', 'image/png');
+      } else if (ext === '.jpg' || ext === '.jpeg') {
+        res.setHeader('Content-Type', 'image/jpeg');
+      } else if (ext === '.gif') {
+        res.setHeader('Content-Type', 'image/gif');
+      } else if (ext === '.webp') {
+        res.setHeader('Content-Type', 'image/webp');
+      }
+
+      // ✅ Allow video/audio seeking
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      // ✅ Allow embedding (helmet might block)
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  })
+);
 
 // ============================================
 // ROOT & HEALTH ROUTES
@@ -108,7 +149,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================
-// ✅ API ROUTES (single registration each)
+// ✅ API ROUTES
 // ============================================
 
 app.use('/api/auth', authRoutes);
