@@ -5,94 +5,91 @@ import { apiCall, getCurrentUser } from '../../utils/storageAPI';
 const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
   const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
   const [currentUser, setCurrentUser] = useState(student || null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [scriptReady, setScriptReady] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const u = await getCurrentUser();
-      if (u) setCurrentUser(u);
-    };
-    if (!student?.email) fetchUser();
-  }, [student]);
-
-  // ✅ Load Paystack script manually
-  useEffect(() => {
     if (window.PaystackPop) {
-      setScriptLoaded(true);
+      setScriptReady(true);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://js.paystack.co/v1/inline.js';
-    script.async = true;
-    script.onload = () => setScriptLoaded(true);
-    document.body.appendChild(script);
+    const s = document.createElement('script');
+    s.src = 'https://js.paystack.co/v1/inline.js';
+    s.async = true;
+    s.onload = () => setScriptReady(true);
+    s.onerror = () => console.error('Paystack script failed to load');
+    document.body.appendChild(s);
   }, []);
 
-  const userEmail = student?.email || currentUser?.email || 'student@example.com';
-  const userName = student?.name || currentUser?.name || 'Student';
-  const userId = student?.id || student?._id || currentUser?.id || currentUser?._id || 'unknown';
+  useEffect(() => {
+    if (!student?.email) {
+      getCurrentUser().then((u) => {
+        if (u) setCurrentUser(u);
+      });
+    }
+  }, [student]);
 
-  const handlePayment = async () => {
+  const email = student?.email || currentUser?.email || 'student@example.com';
+  const name = student?.name || currentUser?.name || 'Student';
+  const uid = student?.id || currentUser?.id || 'unknown';
+
+  const handlePay = () => {
     if (!publicKey) {
-      alert('Payment is not configured. Please contact support.');
+      alert('Payment not configured. Contact support.');
       return;
     }
-    if (!scriptLoaded || !window.PaystackPop) {
-      alert('Payment is loading. Please try again in a moment.');
+    if (!window.PaystackPop) {
+      alert('Payment is loading. Please try again.');
       return;
     }
 
     setProcessing(true);
-    const reference = `lesson_${lesson.id}_${userId}_${Date.now()}`;
+    const ref = `lesson_${lesson.id}_${uid}_${Date.now()}`;
 
     try {
       const handler = window.PaystackPop.setup({
         key: publicKey,
-        email: userEmail,
+        email: email,
         amount: Math.round(lesson.price * 100),
         currency: 'NGN',
-        ref: reference,
+        ref: ref,
         metadata: {
           custom_fields: [
-            { display_name: 'Student Name', variable_name: 'student_name', value: userName },
+            { display_name: 'Student', variable_name: 'student_name', value: name },
             { display_name: 'Lesson', variable_name: 'lesson_title', value: lesson.title || 'Lesson' },
-            { display_name: 'Course', variable_name: 'course_id', value: lesson.courseId || '' },
           ],
         },
-        callback: async function (response) {
-          console.log('✅ Paystack callback:', response);
-          try {
-            const verification = await apiCall('/payments/verify', {
-              method: 'POST',
-              body: JSON.stringify({
-                reference: response.reference,
-                lessonId: lesson.id,
-                courseId: lesson.courseId,
-                teacherId: lesson.teacherId,
-              }),
-            });
-            if (verification?.success) {
-              onSuccess({
-                paymentId: response.reference,
-                gateway: 'paystack',
-                amount: lesson.price,
-                lessonId: lesson.id,
-              });
-            } else {
-              alert('❌ Payment verification failed.');
+        callback: (response) => {
+          apiCall('/payments/verify', {
+            method: 'POST',
+            body: JSON.stringify({
+              reference: response.reference,
+              lessonId: lesson.id,
+              courseId: lesson.courseId,
+              teacherId: lesson.teacherId,
+            }),
+          })
+            .then((v) => {
+              if (v?.success) {
+                onSuccess({
+                  paymentId: response.reference,
+                  gateway: 'paystack',
+                  amount: lesson.price,
+                  lessonId: lesson.id,
+                });
+              } else {
+                alert('Payment verification failed.');
+                onClose();
+              }
+            })
+            .catch((e) => {
+              console.error(e);
+              alert('Could not verify payment.');
               onClose();
-            }
-          } catch (err) {
-            console.error('Verify error:', err);
-            alert('❌ Could not verify payment.');
-            onClose();
-          } finally {
-            setProcessing(false);
-          }
+            })
+            .finally(() => setProcessing(false));
         },
-        onClose: function () {
-          console.log('Payment window closed');
+        onClose: () => {
           setProcessing(false);
           onClose();
         },
@@ -100,27 +97,23 @@ const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
       handler.openIframe();
     } catch (err) {
       console.error('Paystack error:', err);
-      alert('❌ Could not open payment: ' + err.message);
+      alert('Could not open payment: ' + err.message);
       setProcessing(false);
     }
   };
 
   if (!publicKey) {
-    return (
-      <div className="paystack-payment">
-        <p style={{ color: 'red' }}>Payment is not configured. Please contact support.</p>
-      </div>
-    );
+    return <p style={{ color: 'red' }}>Payment is not configured.</p>;
   }
 
   return (
     <div className="paystack-payment">
       <button
-        onClick={handlePayment}
+        onClick={handlePay}
         className="payment-btn paystack-btn"
-        disabled={processing || !scriptLoaded}
+        disabled={processing || !scriptReady}
       >
-        {processing ? 'Processing...' : !scriptLoaded ? 'Loading payment...' : `Pay ₦${lesson.price} with Paystack`}
+        {processing ? 'Processing...' : !scriptReady ? 'Loading...' : `Pay ₦${lesson.price} with Paystack`}
       </button>
       <p className="payment-note">
         You will be redirected to Paystack secure payment page
