@@ -20,7 +20,7 @@ import {
   dismissTeacher,
 } from '../utils/storageAPI';
 import './AdminDashboard.css';
-
+import paymentService from '../utils/paymentService';
 const AdminDashboard = ({ currentUser, setCurrentView }) => {
   const [pendingTeachers, setPendingTeachers] = useState([]);
   const [approvedTeachers, setApprovedTeachers] = useState([]);
