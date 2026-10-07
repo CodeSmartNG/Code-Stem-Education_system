@@ -55,9 +55,27 @@ const PaystackPayment = ({ lesson, student, onSuccess, onClose }) => {
         ref: ref,
         metadata: {
           custom_fields: [
-            { display_name: 'Student', variable_name: 'student_name', value: name },
-            { display_name: 'Lesson', variable_name: 'lesson_title', value: lesson.title || 'Lesson' },
-          ],
+            {
+              display_name: 'Student',
+              variable_name: 'student_name',
+              value: name
+            },
+            {
+              display_name: 'Lesson',
+              variable_name: 'lesson_title',
+              value: lesson.title || 'Lesson'
+            },
+            {
+              display_name: 'Lesson ID',
+              variable_name: 'lesson_id',
+              value: String(lesson.id)
+            },
+            {
+              display_name: 'User ID',
+              variable_name: 'user_id',
+              value: String(uid)
+            }
+          ]
         },
         callback: (response) => {
           apiCall('/payments/verify', {
