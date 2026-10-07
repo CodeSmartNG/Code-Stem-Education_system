@@ -74,17 +74,22 @@ const CourseCatalog = ({ student, setStudent }) => {
       setCourses(publishedCourses);
 
       // ✅ Load purchased lesson IDs for lock checks
-      const currentUser = getCurrentUser();
-      if (currentUser?.id) {
-        try {
-          const response = await apiCall('/lessons/purchased');
-          setPurchasedLessons(response.lessonIds || []);
-          console.log('📋 Purchased lessons:', response.lessonIds);
-        } catch (err) {
-          console.warn('Failed to load purchased lessons:', err.message);
-          setPurchasedLessons([]);
-        }
-      }
+const currentUser = await getCurrentUser();   // ← ADD AWAIT
+console.log('🔑 currentUser for purchased check:', currentUser?.id);
+
+if (currentUser?.id) {
+  try {
+    const response = await apiCall('/lessons/purchased');
+    console.log('📋 /lessons/purchased response:', response);
+    setPurchasedLessons(response.lessonIds || []);
+    console.log('📋 Purchased lessons set:', response.lessonIds);
+  } catch (err) {
+    console.warn('Failed to load purchased lessons:', err.message);
+    setPurchasedLessons([]);
+  }
+} else {
+  console.warn('⚠️ No currentUser.id — skipping purchased load');
+}
 
       setError(null);
     } catch (err) {
