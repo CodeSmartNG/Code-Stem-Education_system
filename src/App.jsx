@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
-
+import { apiCall } from './utils/storageAPI';
 import './styles/payments.css';
 import StudentProfile from './components/StudentProfile';
 import CourseCatalog from './components/CourseCatalog';
