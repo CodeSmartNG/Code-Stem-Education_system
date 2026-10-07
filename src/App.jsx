@@ -269,14 +269,79 @@ const warningTimerRef = useRef(null);
 
       setStudentsState(loadedStudents || []);
 
-      // ✅ Detect special URLs FIRST (before any role-based redirects)
+            // ✅ Detect special URLs FIRST (before any role-based redirects)
       const path = window.location.pathname;
       const isResetPassword = path.startsWith('/reset-password');
       const isVerifyEmail = path.startsWith('/verify-email');
+      const isPaymentCallback = path.startsWith('/payment-callback');
 
       console.log('🔍 Current path:', path);
       console.log('🔍 isResetPassword:', isResetPassword);
       console.log('🔍 isVerifyEmail:', isVerifyEmail);
+      console.log('🔍 isPaymentCallback:', isPaymentCallback);
+
+      // ✅ PAYMENT CALLBACK — handle FIRST and return early
+      if (isPaymentCallback) {
+        console.log('💳 Payment callback detected');
+
+        const params = new URLSearchParams(window.location.search);
+        const reference = params.get('ref') || params.get('reference') || params.get('trxref');
+        const lessonId = params.get('lesson');
+
+        console.log('💳 Reference:', reference);
+        console.log('💳 Lesson:', lessonId);
+
+        if (reference && lessonId) {
+          try {
+            // Verify payment with backend
+            const verifyRes = await apiCall('/payments/verify', {
+              method: 'POST',
+              body: JSON.stringify({ reference, lessonId }),
+            });
+
+            console.log('💳 Verify response:', verifyRes);
+
+            if (verifyRes?.success) {
+              // Mark lesson as purchased
+              try {
+                await apiCall('/lessons/purchase', {
+                  method: 'POST',
+                  body: JSON.stringify({ lessonId }),
+                });
+                setMessage('✅ Payment successful! Lesson unlocked.');
+              } catch (purchaseErr) {
+                console.warn('Purchase mark failed:', purchaseErr);
+                setMessage('✅ Payment successful!');
+              }
+            } else {
+              setMessage('❌ Payment verification failed. Contact support.');
+            }
+          } catch (err) {
+            console.error('Payment callback error:', err);
+            setMessage('❌ Could not verify payment. Contact support.');
+          }
+        } else {
+          setMessage('❌ Invalid payment callback.');
+        }
+
+        // Reload user data to reflect new purchases
+        try {
+          const refreshedUser = await getCurrentUser();
+          if (refreshedUser) {
+            setCurrentUserState({
+              ...refreshedUser,
+              uid: refreshedUser.id,
+            });
+          }
+        } catch (e) {
+          console.warn('User refresh failed:', e);
+        }
+
+        setCurrentView('dashboard');
+        window.history.replaceState({}, document.title, '/');
+        setIsInitialized(true);
+        return;   // ✅ Stop further init
+      }
 
       // ✅ PRIORITY 1: Special URLs always override everything
       if (isResetPassword) {
