@@ -1,3 +1,4 @@
+// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -41,40 +42,53 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-
   resetPasswordToken: {
-  type: String,
-  default: null,
-},
-
-resetPasswordExpires: {
-  type: Date,
-  default: null,
-},
+    type: String,
+    default: null,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null,
+  },
   verificationToken: String,
-  
   profileImage: String,
   bio: String,
   phone: String,
   location: String,
   whatsappNumber: String,
+
+  // ✅ Wallet — used for teacher earnings
+  wallet: {
+    balance: { type: Number, default: 0 },
+    totalEarnings: { type: Number, default: 0 },
+    pendingWithdrawals: { type: Number, default: 0 },
+    paidOut: { type: Number, default: 0 },
+    transactions: [{
+      type: { type: String, enum: ['credit', 'debit', 'withdrawal'], default: 'credit' },
+      amount: { type: Number, default: 0 },
+      description: { type: String, default: '' },
+      reference: { type: String, default: '' },
+      createdAt: { type: Date, default: Date.now }
+    }]
+  },
+
   level: {
     type: String,
     default: 'Beginner'
   },
   purchasedLessons: [{
-  courseKey: String,
-  lessonId: String,
-  purchasedAt: Date
-}],
-completedLessons: {
-  type: [String],                    // ✅ Array of lesson keys
-  default: []
-},
-progress: {
-  type: mongoose.Schema.Types.Mixed, // ✅ Object: { courseId: percentage }
-  default: {}
-},
+    courseKey: String,
+    lessonId: String,
+    purchasedAt: Date
+  }],
+  completedLessons: {
+    type: [String],
+    default: []
+  },
+  progress: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   enrolledCourses: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course'
@@ -88,7 +102,6 @@ progress: {
 // ============================================
 // HASH PASSWORD BEFORE SAVING
 // ============================================
-
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
 
@@ -98,24 +111,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // ============================================
-// COMPARE PASSWORD (with debug logs)
+// COMPARE PASSWORD
 // ============================================
-
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
-    console.log('\n🔐 COMPARE PASSWORD:');
-    console.log('   Candidate password:', JSON.stringify(candidatePassword));
-    console.log('   Candidate length:', candidatePassword?.length);
-    console.log('   Stored hash:', this.password);
-    console.log('   Hash length:', this.password?.length);
-    console.log('   Hash prefix:', this.password?.substring(0, 7));
-
-    const result = await bcrypt.compare(candidatePassword, this.password);
-
-    console.log('   ✅ Match result:', result);
-    return result;
+    return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
-    console.error('   ❌ comparePassword error:', error);
     throw error;
   }
 };
