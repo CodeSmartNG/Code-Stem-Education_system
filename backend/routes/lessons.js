@@ -5,7 +5,7 @@ const router = express.Router();
 
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
-const User = require('../models/User');      // ✅ NEW — needed for purchase/access
+const User = require('../models/User');
 const { auth, isTeacher } = require('../middleware/auth');
 
 // ============================================
@@ -15,15 +15,13 @@ const normalizeLesson = (lesson) => {
   const obj = lesson.toObject ? lesson.toObject() : lesson;
   const id = obj._id ? obj._id.toString() : obj.id;
 
-  const normalized = {
+  return {
     ...obj,
     id: id,
     _id: id,
     quiz: obj.quizId || null,
     multimedia: obj.multimediaIds || []
   };
-
-  return normalized;
 };
 
 // ============================================
@@ -50,20 +48,43 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Get lessons error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
 // ============================================
-// ✅ NEW — Check if user has access to a lesson
-// GET /api/lessons/:id/access?userId=xxx&courseKey=yyy
+// ✅ GET purchased lesson IDs for current user
+// GET /api/lessons/purchased
+// ⚠️ MUST come before /:id
+// ============================================
+router.get('/purchased', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, lessonIds: [] });
+    }
+
+    const lessonIds = (user.purchasedLessons || []).map((p) =>
+      (p.lessonId?._id || p.lessonId)?.toString()
+    );
+
+    console.log('📋 /lessons/purchased →', lessonIds);
+
+    return res.json({ success: true, lessonIds });
+  } catch (error) {
+    console.error('Get purchased lessons error:', error);
+    return res.status(500).json({ success: false, lessonIds: [] });
+  }
+});
+
+// ============================================
+// ✅ Check if user has access to a lesson
+// GET /api/lessons/:id/access
 // ============================================
 router.get('/:id/access', auth, async (req, res) => {
   try {
-    const { userId, courseKey } = req.query;
+    const { userId } = req.query;
     const lessonId = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(lessonId)) {
@@ -75,7 +96,6 @@ router.get('/:id/access', auth, async (req, res) => {
       return res.status(404).json({ success: false, hasAccess: false, message: 'Lesson not found' });
     }
 
-    // Free lessons are always accessible
     if (lesson.isFree) {
       return res.json({ success: true, hasAccess: true });
     }
@@ -89,7 +109,6 @@ router.get('/:id/access', auth, async (req, res) => {
       return res.json({ success: true, hasAccess: false });
     }
 
-    // ✅ Check if lesson is in user's purchasedLessons array
     const hasAccess = (user.purchasedLessons || []).some((p) => {
       const pid = p.lessonId?._id || p.lessonId;
       return pid?.toString() === lessonId;
@@ -103,7 +122,7 @@ router.get('/:id/access', auth, async (req, res) => {
 });
 
 // ============================================
-// ✅ NEW — Mark lesson as purchased
+// ✅ Mark lesson as purchased
 // POST /api/lessons/purchase
 // ============================================
 router.post('/purchase', auth, async (req, res) => {
@@ -118,7 +137,6 @@ router.post('/purchase', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'lessonId is required' });
     }
 
-    // Trust the authenticated user's ID, not the body's
     const realUserId = req.user._id;
 
     const user = await User.findById(realUserId);
@@ -128,7 +146,6 @@ router.post('/purchase', auth, async (req, res) => {
 
     user.purchasedLessons = user.purchasedLessons || [];
 
-    // Idempotency — already purchased?
     const alreadyPurchased = user.purchasedLessons.some((p) => {
       const pid = p.lessonId?._id || p.lessonId;
       return pid?.toString() === lessonId;
@@ -144,7 +161,7 @@ router.post('/purchase', auth, async (req, res) => {
 
     user.purchasedLessons.push({
       lessonId,
-      courseKey,
+      courseKey: courseKey || null,
       purchasedAt: new Date()
     });
 
@@ -161,6 +178,7 @@ router.post('/purchase', auth, async (req, res) => {
 // ============================================
 // GET single lesson by ID
 // GET /api/lessons/:id
+// ⚠️ MUST come AFTER /purchased, /:id/access, /purchase
 // ============================================
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -395,7 +413,6 @@ router.post('/:id/quiz', [auth, isTeacher], async (req, res) => {
 
     const Quiz = require('../models/Quiz');
 
-    // ✅ Ensure every question has an id (schema requires it)
     const sanitizedQuestions = questions.map((q, idx) => ({
       id: q.id !== undefined ? q.id : Date.now() + idx,
       question: q.question,
