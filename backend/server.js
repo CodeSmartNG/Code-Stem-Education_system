@@ -148,6 +148,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// 🐛 TEMPORARY DEBUG
+app.get('/api/debug/paystack-key', (req, res) => {
+  const key = process.env.PAYSTACK_SECRET_KEY || '';
+  res.json({
+    exists: !!key,
+    length: key.length,
+    prefix: key.substring(0, 12),
+    suffix: key.substring(key.length - 4),
+    mode: key.startsWith('sk_live_') ? 'LIVE'
+        : key.startsWith('sk_test_') ? 'TEST'
+        : key.startsWith('pk_') ? 'WRONG (public key!)'
+        : 'UNKNOWN',
+  });
+});
 // ============================================
 // ✅ API ROUTES
 // ============================================
