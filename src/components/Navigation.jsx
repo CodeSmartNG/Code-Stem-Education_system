@@ -225,6 +225,15 @@ const Navigation = ({
                 <span className="nav-icon">💬</span>
                 <span className="nav-label">Forum</span>
               </button>
+              </li>
+      <li>
+    <button
+  className={`app-nav-btn ${currentView === 'chat' ? 'active' : ''}`}
+  onClick={() => handleNavClick('chat')}
+>
+  <span className="nav-icon">💬</span>
+  <span className="nav-label">Chat</span>
+</button>
             </li>
 
             <li>
