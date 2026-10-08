@@ -74,22 +74,22 @@ const CourseCatalog = ({ student, setStudent }) => {
       setCourses(publishedCourses);
 
       // ✅ Load purchased lesson IDs for lock checks
-const currentUser = await getCurrentUser();   // ← ADD AWAIT
-console.log('🔑 currentUser for purchased check:', currentUser?.id);
+      const currentUser = await getCurrentUser();
+      console.log('🔑 currentUser for purchased check:', currentUser?.id);
 
-if (currentUser?.id) {
-  try {
-    const response = await apiCall('/lessons/purchased');
-    console.log('📋 /lessons/purchased response:', response);
-    setPurchasedLessons(response.lessonIds || []);
-    console.log('📋 Purchased lessons set:', response.lessonIds);
-  } catch (err) {
-    console.warn('Failed to load purchased lessons:', err.message);
-    setPurchasedLessons([]);
-  }
-} else {
-  console.warn('⚠️ No currentUser.id — skipping purchased load');
-}
+      if (currentUser?.id) {
+        try {
+          const response = await apiCall('/lessons/purchased');
+          console.log('📋 /lessons/purchased response:', response);
+          setPurchasedLessons(response.lessonIds || []);
+          console.log('📋 Purchased lessons set:', response.lessonIds);
+        } catch (err) {
+          console.warn('Failed to load purchased lessons:', err.message);
+          setPurchasedLessons([]);
+        }
+      } else {
+        console.warn('⚠️ No currentUser.id — skipping purchased load');
+      }
 
       setError(null);
     } catch (err) {
@@ -171,13 +171,47 @@ if (currentUser?.id) {
     setExpandedCourses({});
   };
 
-  // ✅ Synchronous access check — uses purchasedLessons state
+  // ✅ Synchronous access check
   const checkHasAccess = (lesson) => {
     if (!lesson) return false;
     if (lesson.isFree === true) return true;
 
     const lessonId = lesson.id || lesson._id;
     return purchasedLessons.includes(lessonId) || purchasedLessons.includes(lesson._id);
+  };
+
+  // ============================================
+  // SHARE LESSON (NEW)
+  // ============================================
+  const handleShareLesson = async (lesson) => {
+    if (!lesson) return;
+
+    const lessonTitle = lesson.title || 'Untitled Lesson';
+    const shareUrl = `${window.location.origin}/?lesson=${lesson.id || lesson._id}`;
+    const shareText = `Check out "${lessonTitle}" on CodeSmartNG!\n\nLearn any skill. Teach anything.`;
+    const fullMessage = `${shareText}\n\n${shareUrl}`;
+
+    // Try native share first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: lessonTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(fullMessage);
+      alert('📋 Link copied!\n\nPaste it in WhatsApp, Telegram, or anywhere to share.');
+    } catch (err) {
+      prompt('Copy this link to share:', shareUrl);
+    }
   };
 
   // ============================================
@@ -256,7 +290,6 @@ if (currentUser?.id) {
 
     console.log('💳 Opening payment modal for:', lesson.title);
 
-    // ✅ Set the lesson and open the modal
     setSelectedLesson({
       courseKey,
       lessonIndex,
@@ -294,11 +327,9 @@ if (currentUser?.id) {
         return;
       }
 
-      // ✅ Synchronous check
       const hasAccess = checkHasAccess(lesson);
 
       if (!hasAccess) {
-        // ✅ Open payment modal instead of calling purchaseLesson directly
         setSelectedLesson({
           courseKey,
           lessonIndex,
@@ -315,7 +346,6 @@ if (currentUser?.id) {
         return;
       }
 
-      // ✅ User has access — open the lesson
       setSelectedCourse(courseKey);
       setCurrentLesson(lessonIndex);
       setShowQuiz(false);
@@ -345,25 +375,19 @@ if (currentUser?.id) {
       if (selectedLesson) {
         const lessonId = selectedLesson.lesson.id || selectedLesson.lesson._id;
 
-        // ✅ 1. Mark lesson as purchased on the backend
         await purchaseLesson(
           getCurrentUser()?.id,
           selectedLesson.courseKey,
           lessonId
         );
 
-        // ✅ 2. Add to purchasedLessons so lock clears immediately
         setPurchasedLessons((prev) =>
           prev.includes(lessonId) ? prev : [...prev, lessonId]
         );
 
-        // ✅ 3. Reload courses to refresh
         await loadCourses();
-
-        // ✅ 4. Load lesson multimedia
         await loadLessonMultimedia(selectedLesson.courseKey, lessonId);
 
-        // ✅ 5. Select the newly unlocked lesson
         setSelectedCourse(selectedLesson.courseKey);
         setCurrentLesson(selectedLesson.lessonIndex);
         setShowPaymentModal(false);
@@ -500,12 +524,22 @@ if (currentUser?.id) {
 
         <div className="lesson-header">
           <h2>{lesson.title || 'Untitled Lesson'}</h2>
-          {isCompleted && <span className="completion-badge">Completed ✓</span>}
-          {!lesson.isFree && (
-            <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
-              {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
-            </span>
-          )}
+          <div className="lesson-header-badges">
+            {isCompleted && <span className="completion-badge">Completed ✓</span>}
+            {!lesson.isFree && (
+              <span className={`price-badge ${hasAccess ? 'purchased' : ''}`}>
+                {hasAccess ? '✅ Purchased' : `₦${lesson.price}`}
+              </span>
+            )}
+            <button
+              className="share-lesson-btn"
+              onClick={() => handleShareLesson(lesson)}
+              title="Share this lesson"
+              aria-label="Share this lesson"
+            >
+              🔗 Share
+            </button>
+          </div>
         </div>
 
         {course.teacherName && (
@@ -758,6 +792,14 @@ if (currentUser?.id) {
                               : isPaidLesson && !hasAccess
                               ? `Purchase - ₦${lesson.price}`
                               : 'Start Lesson'}
+                          </button>
+                          <button
+                            className="share-lesson-icon-btn"
+                            onClick={() => handleShareLesson(lesson)}
+                            title="Share"
+                            aria-label="Share lesson"
+                          >
+                            🔗
                           </button>
                         </div>
                       </div>
