@@ -71,8 +71,6 @@ app.use(morgan('dev'));
 // ✅ CRITICAL: Webhook MUST come before express.json() — needs raw body
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use('/api/chat', chatRoutes);
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // ============================================
 // ✅ STATIC FILES — with correct MIME types
