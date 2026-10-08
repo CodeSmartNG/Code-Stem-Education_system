@@ -71,11 +71,12 @@ const ChatPage = ({ currentUser }) => {
       setNewText('');
       await fetchMessages(false);
     } catch (err) {
-      console.error('Send error:', err);
-      setError('Failed to send message');
-    } finally {
-      setSending(false);
-    }
+  console.error('❌ Send error:', err);
+  const msg = err?.message || 'unknown error';
+  setError('Failed: ' + msg);
+} finally {
+  setSending(false);
+}
   };
 
   // ============================================
