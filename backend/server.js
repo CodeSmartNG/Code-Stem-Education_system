@@ -178,6 +178,7 @@ app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/chat', chatRoutes);   // ← MOVE HERE ✅
 
 // ============================================
 // ✅ DEBUG: List all registered routes
