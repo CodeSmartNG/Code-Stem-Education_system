@@ -7,10 +7,13 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 
+
 // Load environment variables
 dotenv.config();
 
 // ✅ Register all models at startup so populate() works
+require('./models/Message');
+require('./models/Presence');
 require('./models/User');
 require('./models/Course');
 require('./models/Lesson');
@@ -30,7 +33,7 @@ const multimediaRoutes = require('./routes/multimedia');
 const quizRoutes = require('./routes/quizzes');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
-
+const chatRoutes = require('./routes/chat');
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
 
@@ -67,7 +70,7 @@ app.use(morgan('dev'));
 
 // ✅ CRITICAL: Webhook MUST come before express.json() — needs raw body
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-
+app.use('/api/chat', chatRoutes);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
