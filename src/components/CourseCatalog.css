@@ -684,3 +684,63 @@
     width: 100%;
   }
 }
+
+/* ============================================
+   SHARE LESSON BUTTON
+   ============================================ */
+.lesson-header-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.share-lesson-btn {
+  background: #e4e6eb;
+  color: #050505;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.share-lesson-btn:hover {
+  background: #d8dadf;
+}
+
+.share-lesson-btn:active {
+  transform: scale(0.96);
+}
+
+.share-lesson-icon-btn {
+  background: #e4e6eb;
+  color: #050505;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.share-lesson-icon-btn:hover {
+  background: #d8dadf;
+}
+
+@media (max-width: 480px) {
+  .lesson-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .lesson-header-badges {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
