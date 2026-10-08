@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import NotificationBell from './NotificationBell';
 import './Navigation.css';
-
 const Navigation = ({ 
   currentView, 
   setCurrentView, 
