@@ -1069,30 +1069,56 @@ case 'reset-password':
         return null;
       }
     }
+// Student views
+if (isStudent) {
+  console.log('🎯 Rendering student views for:', currentView);
+  switch(currentView) {
+    case 'profile':
+      return <StudentProfile student={currentUser} setStudent={updateStudentData} />;
 
-    // Student views
-    if (isStudent) {
-      console.log('🎯 Rendering student views for:', currentView);
-      switch(currentView) {
-        case 'profile':
-          return <StudentProfile student={currentUser} setStudent={updateStudentData} />;
-        case 'courses':
-          return (
-            <CourseCatalog 
-              student={currentUser} 
-              setStudent={updateStudentData}
-              onLessonPurchase={handleLessonPurchase}
-              onCheckLessonAccess={checkLessonAccess}
-              onGetTeacherContact={getTeacherContactUrl}
-            />
-          );
-        
-case 'discussion':
-  return <DiscussionForum currentUser={currentUser} />;
-case 'chat':
-  return <ChatPage currentUser={currentUser} />;
-case 'dashboard':
-default:
+    case 'courses':
+      return (
+        <CourseCatalog 
+          student={currentUser} 
+          setStudent={updateStudentData}
+          onLessonPurchase={handleLessonPurchase}
+          onCheckLessonAccess={checkLessonAccess}
+          onGetTeacherContact={getTeacherContactUrl}
+        />
+      );
+
+    case 'discussion':
+      return <DiscussionForum currentUser={currentUser} />;
+
+    case 'chat':
+      return <ChatPage currentUser={currentUser} />;
+
+    case 'dashboard':
+    default:
+      return (
+        <>
+          <MessageDisplay />
+          <Dashboard student={currentUser} setStudent={updateStudentData} />
+        </>
+      );
+  }
+}
+
+// Default fallback
+console.warn('⚠️ No specific view matched, showing default dashboard');
+if (isAdmin) {
+  return <AdminDashboard currentUser={currentUser} setCurrentView={setCurrentView} />;
+} else if (isTeacher) {
+  return (
+    <TeacherDashboard 
+      currentUser={currentUser} 
+      setCurrentUser={updateCurrentUser}
+      onPaymentComplete={handlePaymentComplete}
+      onTransactionUpdate={handleTransactionUpdate}
+      paymentMethods={['paystack', 'flutterwave']}
+    />
+  );
+} else {
   return (
     <>
       <MessageDisplay />
