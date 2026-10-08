@@ -19,21 +19,32 @@ export const apiCall = async (endpoint, options = {}) => {
   };
 
   const config = {
-    ...options,
-    headers,
-  };
+  ...options,
+  headers,
+};
 
-  // If FormData, remove Content-Type
-  if (options.body instanceof FormData) {
-    delete config.headers['Content-Type'];
-  }
+// If FormData, remove Content-Type
+if (options.body instanceof FormData) {
+  delete config.headers['Content-Type'];
+}
 
-  const response = await fetch(`${API_URL}${endpoint}`, config);
-  const data = await response.json();
+// 🐛 DEBUG — log every request
+console.log(`📡 ${options.method || 'GET'} ${API_URL}${endpoint}`, {
+  body: options.body,
+  hasToken: !!token,
+});
 
+const response = await fetch(`${API_URL}${endpoint}`, config);
+const data = await response.json();
+
+// 🐛 DEBUG — log every response
+console.log(`📥 ${response.status} ${endpoint}`, data);
+  
   if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
-  }
+  const statusText = `[${response.status}]`;
+  const message = data?.message || data?.error || 'API request failed';
+  throw new Error(`${statusText} ${message}`);
+}
 
   return data;
 };
