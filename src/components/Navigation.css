@@ -712,3 +712,60 @@
 .scrollable-nav::-webkit-scrollbar {
   display: none;
 }
+
+/* ============================================
+   FLOATING CHAT BUTTON — WhatsApp AI style
+   ============================================ */
+.floating-chat-btn {
+  position: fixed;
+  bottom: 96px;
+  right: 16px;
+
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #075E54;
+  color: white;
+  border: none;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 6px 16px rgba(7, 94, 84, 0.35);
+  z-index: 900;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.floating-chat-btn:hover {
+  background: #064b43;
+  box-shadow: 0 8px 20px rgba(7, 94, 84, 0.45);
+  transform: translateY(-2px);
+}
+
+.floating-chat-btn:active {
+  transform: scale(0.95);
+}
+
+.floating-chat-icon {
+  width: 28px;
+  height: 28px;
+  stroke: white;
+  fill: none;
+}
+
+@media (max-width: 480px) {
+  .floating-chat-btn {
+    bottom: 88px;
+    right: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+  }
+  .floating-chat-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
