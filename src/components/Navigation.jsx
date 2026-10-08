@@ -1,5 +1,4 @@
 // src/components/Navigation.jsx
-
 import React, { useState } from 'react';
 import NotificationBell from './NotificationBell';
 import './Navigation.css';
@@ -16,7 +15,7 @@ const Navigation = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-  // Role detection (fallback to props if currentUser is missing)
+  // Role detection
   const userRole = currentUser?.role || 'student';
   const isAdminUser = userRole === 'admin' || isAdmin;
   const isTeacherUser = userRole === 'teacher' || isTeacher;
@@ -82,6 +81,12 @@ const Navigation = ({
               </button>
               {showMoreLinks && (
                 <div className="dropdown-menu">
+                  {/* ✅ Forum moved here */}
+                  {currentUser && (
+                    <button className="dropdown-link" onClick={() => handleNavClick('discussion')}>
+                      💬 Forum
+                    </button>
+                  )}
                   <button className="dropdown-link" onClick={() => handleNavClick('blog')}>
                     📝 Blog
                   </button>
@@ -219,25 +224,6 @@ const Navigation = ({
 
             <li>
               <button 
-                className={`app-nav-btn ${currentView === 'discussion' ? 'active' : ''}`}
-                onClick={() => handleNavClick('discussion')}
-              >
-                <span className="nav-icon">💬</span>
-                <span className="nav-label">Forum</span>
-              </button>
-              </li>
-      <li>
-    <button
-  className={`app-nav-btn ${currentView === 'chat' ? 'active' : ''}`}
-  onClick={() => handleNavClick('chat')}
->
-  <span className="nav-icon">💬</span>
-  <span className="nav-label">Chat</span>
-</button>
-            </li>
-
-            <li>
-              <button 
                 className={`app-nav-btn ${currentView === 'profile' ? 'active' : ''}`}
                 onClick={() => handleNavClick('profile')}
               >
@@ -301,6 +287,31 @@ const Navigation = ({
           </ul>
         </div>
       </nav>
+
+      {/* ✅ Floating Chat Button — WhatsApp AI style */}
+      {currentUser && (
+        <button
+          className="floating-chat-btn"
+          onClick={() => handleNavClick('chat')}
+          aria-label="Open Chat"
+          title="Live Chat"
+        >
+          <svg 
+            className="floating-chat-icon"
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            <circle cx="9" cy="11" r="0.5" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="11" r="0.5" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="11" r="0.5" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      )}
     </>
   );
 };
