@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
+import ChatPage from './components/ChatPage';
 import { apiCall } from './utils/storageAPI';
 import './styles/payments.css';
 import StudentProfile from './components/StudentProfile';
@@ -1085,19 +1086,20 @@ case 'reset-password':
               onGetTeacherContact={getTeacherContactUrl}
             />
           );
-        case 'discussion':
-          return <DiscussionForum currentUser={currentUser} />;
-        case 'dashboard':
-        default:
-          return (
-            <>
-              <MessageDisplay />
-              <Dashboard student={currentUser} setStudent={updateStudentData} />
-            </>
-          );
-      }
-    }
-
+        
+case 'discussion':
+  return <DiscussionForum currentUser={currentUser} />;
+case 'chat':
+  return <ChatPage currentUser={currentUser} />;
+case 'dashboard':
+default:
+  return (
+    <>
+      <MessageDisplay />
+      <Dashboard student={currentUser} setStudent={updateStudentData} />
+    </>
+  );
+}
     // Default fallback
     console.warn('⚠️ No specific view matched, showing default dashboard');
     if (isAdmin) {
