@@ -702,6 +702,40 @@ if (currentUser?.id) {
                 </button>
               )}
 
+              // ============================================
+// SHARE LESSON
+// ============================================
+const handleShareLesson = async (lesson) => {
+  if (!lesson) return;
+
+  const lessonTitle = lesson.title || 'Untitled Lesson';
+  const shareUrl = `${window.location.origin}/?lesson=${lesson.id || lesson._id}`;
+  const shareText = `Check out "${lessonTitle}" on CodeSmartNG!\n\nLearn any skill. Teach anything.`;
+  const fullMessage = `${shareText}\n\n${shareUrl}`;
+
+  // ✅ Try native share first (mobile)
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: lessonTitle,
+        text: shareText,
+        url: shareUrl,
+      });
+      return;
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  // ✅ Fallback: copy to clipboard
+  try {
+    await navigator.clipboard.writeText(fullMessage);
+    alert('📋 Link copied!\n\nPaste it in WhatsApp, Telegram, or anywhere to share.');
+  } catch (err) {
+    prompt('Copy this link to share:', shareUrl);
+  }
+};
+              
               {expandedCourses[key] && (
                 <div className="lessons-list">
                   {course.lessons?.map((lesson, index) => {
