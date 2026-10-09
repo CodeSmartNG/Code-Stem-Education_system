@@ -853,16 +853,7 @@ try {
           <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
         </div>
       )}
-      {isUploading && (
-  <div className="upload-progress">
-    <div className="progress-bar">
-      <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
-        {uploadProgress}%
-      </div>
-    </div>
-    <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
-  </div>
-)}
+      
       <div className="teacher-tabs">
         <button
           onClick={() => setActiveTab('overview')}
