@@ -1,33 +1,9 @@
 // src/components/TeacherDashboard.jsx
 
-// Wake Lock helper
-const wakeLockRef = React.useRef(null);
 
-const requestWakeLock = async () => {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLockRef.current = await navigator.wakeLock.request('screen');
-      console.log('🔒 Screen wake lock acquired');
-    }
-  } catch (err) {
-    console.warn('Wake lock failed:', err.message);
-  }
-};
-
-const releaseWakeLock = async () => {
-  try {
-    if (wakeLockRef.current) {
-      await wakeLockRef.current.release();
-      wakeLockRef.current = null;
-      console.log('🔓 Screen wake lock released');
-    }
-  } catch (err) {
-    console.warn('Wake lock release failed:', err.message);
-  }
-};
 // ✅ Custom Backend Version with resilient lesson creation
+import React, { useState, useEffect, useRef } from 'react';
 
-import React, { useState, useEffect } from 'react';
 import {
   getCurrentUser,
   getCoursesByTeacher,
@@ -155,7 +131,32 @@ const TeacherDashboard = () => {
     accountNumber: '',
     accountName: '',
   });
+  
+  // Wake Lock helper
+const wakeLockRef = React.useRef(null);
 
+const requestWakeLock = async () => {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      console.log('🔒 Screen wake lock acquired');
+    }
+  } catch (err) {
+    console.warn('Wake lock failed:', err.message);
+  }
+};
+
+const releaseWakeLock = async () => {
+  try {
+    if (wakeLockRef.current) {
+      await wakeLockRef.current.release();
+      wakeLockRef.current = null;
+      console.log('🔓 Screen wake lock released');
+    }
+  } catch (err) {
+    console.warn('Wake lock release failed:', err.message);
+  }
+};
   // ============================================
   // HELPERS
   // ============================================
@@ -415,41 +416,43 @@ const TeacherDashboard = () => {
       console.log('✅ Lesson created successfully:', lessonId);
 
       // ---------- Step 2: Optional — upload video ----------
-      if (newLessonForm.videoFile && lessonId) {
-  await requestWakeLock();          // ✅ Keep screen on
+      
+if (newLessonForm.videoFile && lessonId) {
+  await requestWakeLock();   // ✅ Keep screen awake
+
   try {
     const currentUser = await getCurrentUser();
     const userId = currentUser?.id || currentUser?.uid;
 
     if (userId) {
       const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
-      const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
-      // ...
+      const downloadURL = await uploadFileToFirebase(
+        newLessonForm.videoFile,
+        filePath
+      );
+
+      const multimediaData = {
+        type: 'video',
+        url: downloadURL,
+        title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
+        description: newLessonForm.videoDescription || 'Video content for this lesson',
+        fileName: newLessonForm.videoFileName,
+        fileSize: newLessonForm.videoFile.size,
+        fileType: newLessonForm.videoFile.type,
+        firebasePath: filePath,
+      };
+
+      await addMultimediaToLesson(lessonId, multimediaData);
+      console.log('✅ Video attached to lesson');
+    } else {
+      console.warn('⚠️ No user ID — skipping video upload');
     }
+  } catch (videoError) {
+    console.warn('⚠️ Video upload failed (lesson still saved):', videoError.message);
   } finally {
-    await releaseWakeLock();        // ✅ Release after
+    await releaseWakeLock();   // ✅ Always release
   }
 }
-            const multimediaData = {
-              type: 'video',
-              url: downloadURL,
-              title: newLessonForm.videoTitle || newLessonForm.videoFileName || 'Lesson Video',
-              description: newLessonForm.videoDescription || 'Video content for this lesson',
-              fileName: newLessonForm.videoFileName,
-              fileSize: newLessonForm.videoFile.size,
-              fileType: newLessonForm.videoFile.type,
-              firebasePath: filePath,
-            };
-
-            await addMultimediaToLesson(lessonId, multimediaData);
-            console.log('✅ Video attached to lesson');
-          } else {
-            console.warn('⚠️ No user ID — skipping video upload');
-          }
-        } catch (videoError) {
-          console.warn('⚠️ Video upload failed (lesson still saved):', videoError.message);
-        }
-      }
 
       // ---------- Step 3: Optional — attach quiz ----------
       if (quizForm.questions.length > 0 && lessonId) {
@@ -647,14 +650,16 @@ const TeacherDashboard = () => {
     }
 
     setIsUploading(true);
-    setUploadProgress(0);
-    const progressInterval = simulateUploadProgress();
+setUploadProgress(0);
+const progressInterval = simulateUploadProgress();
 
-    try {
-      const currentUser = await getCurrentUser();
-      const userId = currentUser?.id || currentUser?.uid;
-      if (!userId) throw new Error('Please log in again');
+await requestWakeLock();   // ✅ Keep screen awake
 
+try {
+  const currentUser = await getCurrentUser();
+  const userId = currentUser?.id || currentUser?.uid;
+  if (!userId) throw new Error('Please log in again');
+  
       const filePath = `teachers/${userId}/media/${Date.now()}_${newMultimediaForm.fileName}`;
       const fileUrl = await uploadFileToFirebase(newMultimediaForm.file, filePath);
       if (!fileUrl) throw new Error('Upload returned no URL');
@@ -848,7 +853,16 @@ const TeacherDashboard = () => {
           <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
         </div>
       )}
-
+      {isUploading && (
+  <div className="upload-progress">
+    <div className="progress-bar">
+      <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
+        {uploadProgress}%
+      </div>
+    </div>
+    <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
+  </div>
+)}
       <div className="teacher-tabs">
         <button
           onClick={() => setActiveTab('overview')}
