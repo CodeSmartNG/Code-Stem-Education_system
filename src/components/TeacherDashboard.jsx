@@ -1,4 +1,30 @@
 // src/components/TeacherDashboard.jsx
+
+// Wake Lock helper
+const wakeLockRef = React.useRef(null);
+
+const requestWakeLock = async () => {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      console.log('🔒 Screen wake lock acquired');
+    }
+  } catch (err) {
+    console.warn('Wake lock failed:', err.message);
+  }
+};
+
+const releaseWakeLock = async () => {
+  try {
+    if (wakeLockRef.current) {
+      await wakeLockRef.current.release();
+      wakeLockRef.current = null;
+      console.log('🔓 Screen wake lock released');
+    }
+  } catch (err) {
+    console.warn('Wake lock release failed:', err.message);
+  }
+};
 // ✅ Custom Backend Version with resilient lesson creation
 
 import React, { useState, useEffect } from 'react';
@@ -390,14 +416,20 @@ const TeacherDashboard = () => {
 
       // ---------- Step 2: Optional — upload video ----------
       if (newLessonForm.videoFile && lessonId) {
-        try {
-          const currentUser = await getCurrentUser();
-          const userId = currentUser?.id || currentUser?.uid;
+  await requestWakeLock();          // ✅ Keep screen on
+  try {
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.id || currentUser?.uid;
 
-          if (userId) {
-            const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
-            const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
-
+    if (userId) {
+      const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
+      const downloadURL = await uploadFileToFirebase(newLessonForm.videoFile, filePath);
+      // ...
+    }
+  } finally {
+    await releaseWakeLock();        // ✅ Release after
+  }
+}
             const multimediaData = {
               type: 'video',
               url: downloadURL,
