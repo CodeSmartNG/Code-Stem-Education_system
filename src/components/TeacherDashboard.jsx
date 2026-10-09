@@ -435,10 +435,13 @@ if (newLessonForm.videoFile && lessonId) {
 
     if (userId) {
       const filePath = `teachers/${userId}/videos/${Date.now()}_${newLessonForm.videoFileName}`;
-      const downloadURL = await uploadFileToFirebase(
-        newLessonForm.videoFile,
-        filePath
-      );
+      
+      // ... later ...
+const uploadResult = await uploadVideoWithProgress(
+  newLessonForm.videoFile,
+  (percent) => setUploadProgress(percent)
+);
+const downloadURL = uploadResult.url || uploadResult.fileUrl;
 
       const multimediaData = {
         type: 'video',
@@ -1208,26 +1211,53 @@ try {
 
                 <div className="video-upload-section">
                   <h4>📹 Upload Video (Optional)</h4>
+
                   <div className="form-group">
-                    <label>Select Video File</label>
-                    <div className="file-upload-wrapper">
-                      <input
-                        type="file"
-                        id="videoFile"
-                        accept="video/*,.mp4,.webm,.ogg,.mov,.avi"
-                        onChange={handleVideoFileSelect}
-                      />
-                      <label htmlFor="videoFile" className="file-upload-label">
-                        <span className="upload-icon">📤</span>
-                        {newLessonForm.videoFileName ? (
-                          <span className="file-name">{newLessonForm.videoFileName}</span>
-                        ) : (
-                          <span>Choose Video File</span>
-                        )}
-                      </label>
-                    </div>
-                    <small>Max file size: 100MB</small>
-                  </div>
+  <label>Select Video File</label>
+  <div className="file-upload-wrapper">
+    <input
+      type="file"
+      id="videoFile"
+      accept="video/*,.mp4,.webm,.ogg,.mov,.avi"
+      onChange={handleVideoFileSelect}
+    />
+    <label htmlFor="videoFile" className="file-upload-label">
+      <span className="upload-icon">📤</span>
+      {newLessonForm.videoFileName ? (
+        <span className="file-name">{newLessonForm.videoFileName}</span>
+      ) : (
+        <span>Choose Video File</span>
+      )}
+    </label>
+  </div>
+
+  <small style={{ color: '#666', display: 'block', marginTop: 6 }}>
+    📹 Max file size: <strong>50 MB</strong>
+  </small>
+
+  <div style={{
+    marginTop: 10,
+    padding: 10,
+    background: '#f0f7ff',
+    borderLeft: '3px solid #3182ce',
+    borderRadius: 4,
+    fontSize: 12,
+    color: '#2c5282',
+    lineHeight: 1.5,
+  }}>
+    <strong>💡 Tip: Compress videos first</strong>
+    <br />
+    Upload in <strong>seconds instead of minutes</strong>. Reduce a 97 MB video to ~15 MB using:
+    <br />
+    • <strong>HandBrake</strong> (PC): <a href="https://handbrake.fr" target="_blank" rel="noopener noreferrer">handbrake.fr</a> → preset "Fast 720p30"
+    <br />
+    • <strong>CloudConvert</strong> (online): <a href="https://cloudconvert.com/video-converter" target="_blank" rel="noopener noreferrer">cloudconvert.com</a>
+    <br />
+    • Or search "video compressor" on Play Store
+  </div>
+</div>
+                  
+                  
                   {newLessonForm.videoFile && (
                     <div className="file-preview">
                       <video controls style={{ maxWidth: '100%', maxHeight: '300px' }}>
