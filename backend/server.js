@@ -7,7 +7,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 
-
 // Load environment variables
 dotenv.config();
 
@@ -34,6 +33,7 @@ const quizRoutes = require('./routes/quizzes');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
 const chatRoutes = require('./routes/chat');
+
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
 
@@ -70,7 +70,8 @@ app.use(morgan('dev'));
 
 // ✅ CRITICAL: Webhook MUST come before express.json() — needs raw body
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-app.use('/api/chat', chatRoutes);
+
+// ✅ Body parsers — MUST come before all API routes
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
@@ -112,7 +113,7 @@ app.use(
       // ✅ Allow video/audio seeking
       res.setHeader('Accept-Ranges', 'bytes');
 
-      // ✅ Allow embedding (helmet might block)
+      // ✅ Allow embedding
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
   })
@@ -137,7 +138,8 @@ app.get('/', (req, res) => {
       multimedia: '/api/multimedia',
       quizzes: '/api/quizzes',
       notifications: '/api/notifications',
-      payments: '/api/payments'
+      payments: '/api/payments',
+      chat: '/api/chat'
     }
   });
 });
@@ -165,8 +167,9 @@ app.get('/api/debug/paystack-key', (req, res) => {
         : 'UNKNOWN',
   });
 });
+
 // ============================================
-// ✅ API ROUTES
+// ✅ API ROUTES — all AFTER body parsers
 // ============================================
 
 app.use('/api/auth', authRoutes);
@@ -178,7 +181,7 @@ app.use('/api/multimedia', multimediaRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/chat', chatRoutes);   // ← MOVE HERE ✅
+app.use('/api/chat', chatRoutes);            // ✅ Only ONE registration, AFTER json
 
 // ============================================
 // ✅ DEBUG: List all registered routes
