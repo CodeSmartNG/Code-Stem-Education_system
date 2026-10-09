@@ -529,7 +529,10 @@ export const getTeacherWhatsAppNumber = async (teacherId) => {
 
 export const updateTeacherProfileWithWhatsApp = async (teacherId, data) => {
   try {
-    const response = await api.updateWhatsApp(teacherId, data.whatsappNumber);
+    // ✅ Use the existing updateUser endpoint
+    const response = await api.updateUser(teacherId, {
+      whatsappNumber: data.whatsappNumber,
+    });
     return response.user;
   } catch (error) {
     console.error('Error updating WhatsApp:', error);
