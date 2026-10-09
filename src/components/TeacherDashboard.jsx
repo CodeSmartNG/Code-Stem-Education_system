@@ -189,10 +189,19 @@ const releaseWakeLock = async () => {
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Video file size must be less than 100MB');
-      return;
-    }
+    const MAX_MB = 50;
+if (file.size > MAX_MB * 1024 * 1024) {
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+  alert(
+    `⚠️ Video is too large (${sizeMB} MB).\n\n` +
+    `Maximum: ${MAX_MB} MB.\n\n` +
+    `Please compress the video first:\n` +
+    `• Use HandBrake (PC): handbrake.fr\n` +
+    `• Or CloudConvert (online): cloudconvert.com\n` +
+    `• Or a video compressor app on your phone`
+  );
+  return;
+}
 
     setNewLessonForm({
       ...newLessonForm,
