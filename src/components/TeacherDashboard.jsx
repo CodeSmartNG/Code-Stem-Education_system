@@ -157,6 +157,48 @@ const releaseWakeLock = async () => {
     console.warn('Wake lock release failed:', err.message);
   }
 };
+
+  // ============================================
+// REAL UPLOAD PROGRESS
+// ============================================
+const uploadVideoWithProgress = (file, onProgress) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append('video', file);
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (err) {
+          reject(new Error('Invalid server response'));
+        }
+      } else {
+        reject(new Error(`Upload failed (${xhr.status})`));
+      }
+    });
+
+    xhr.addEventListener('error', () => reject(new Error('Network error')));
+
+    const API_URL =
+      import.meta.env.VITE_API_URL ||
+      'https://code-stem-education-system.onrender.com/api';
+
+    xhr.open('POST', `${API_URL}/upload/video`);
+    xhr.setRequestHeader(
+      'Authorization',
+      `Bearer ${localStorage.getItem('token')}`
+    );
+    xhr.send(formData);
+  });
+};
   // ============================================
   // HELPERS
   // ============================================
@@ -854,19 +896,29 @@ try {
         <h3>👨‍🏫 Teacher Dashboard</h3>
         <p>Manage Your Courses, Earnings, and Lessons</p>
       </div>
+       {isUploading && (
+  <div className="upload-progress">
+    <div className="progress-bar">
+      <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
+        {uploadProgress}%
+      </div>
+    </div>
+    <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
+  </div>
+)}
 
-      {isUploading && (
-        <div className="upload-progress">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${uploadProgress}%` }}>
-              {uploadProgress}%
-            </div>
-          </div>
-          <p>{uploadProgress < 100 ? '📤 Uploading... Please wait.' : '✅ Upload complete!'}</p>
-        </div>
-      )}
-      
-      <div className="teacher-tabs">
+{isUploading && (
+  <div className="upload-warning">
+    <span className="upload-warning-icon">⚠️</span>
+    <div>
+      <strong>Keep this screen open</strong>
+      <p>Don't switch apps or lock your phone during the upload.</p>
+    </div>
+  </div>
+)}
+
+<div className="teacher-tabs">
+
         <button
           onClick={() => setActiveTab('overview')}
           className={activeTab === 'overview' ? 'active' : ''}
