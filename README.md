@@ -1,57 +1,67 @@
-# CodeSmartNG Stem Platform 🎓
+# CodeSmartNG Learn 🎓
 
-A comprehensive STEM education platform built with React that provides interactive learning experiences for students, teaching tools for educators, and administrative capabilities for institutions.
+**Learn Any Skill. Teach Anything.**
 
-![CodeSmartNG Stem](https://img.shields.io/badge/CodeSmartNG-Stem%20Platform-blue)
-![React](https://img.shields.io/badge/React-18.2.0-61dafb)
-![License](https://img.shields.io/badge/License-MIT-green)
+A full-stack education platform connecting students with expert teachers across technology, business, and creative skills. Built with React, Node.js, MongoDB, and Paystack for seamless learning and payments.
 
-## 🚀 Features
+---
 
-### 👨‍🎓 For Students
-- **Interactive Dashboard** - Personalized learning dashboard
-- **Course Catalog** - Browse and enroll in STEM courses
-- **Progress Tracking** - Monitor learning progress and achievements
-- **Discussion Forum** - Collaborate with peers and instructors
-- **Profile Management** - Update personal information and preferences
+## 🌟 Features
 
-### 👨‍🏫 For Teachers
-- **Teacher Dashboard** - Manage courses and student progress
-- **Course Creation** - Develop and publish educational content
-- **Student Analytics** - Track student performance and engagement
-- **Communication Tools** - Interact with students through forums
-- **Profile & Portfolio** - Showcase expertise and qualifications
+### For Students
+- 📚 Browse courses across multiple categories
+- 🎬 Watch video lessons with lesson materials
+- 📝 Take quizzes with instant feedback
+- 💳 Purchase premium lessons via Paystack (Card, Bank Transfer, USSD)
+- 💬 Real-time chat with teachers and other students
+- 🔔 In-app notifications
+- 🏆 Certificate on course completion
+- 📱 Fully responsive — works on any device
 
-### ⚙️ For Administrators
-- **Admin Dashboard** - Platform overview and analytics
-- **User Management** - Manage students, teachers, and permissions
-- **Course Management** - Oversee all courses and content
-- **System Monitoring** - Platform health and performance metrics
+### For Teachers
+- 👨‍🏫 Create and manage courses
+- 📹 Upload video lessons (MP4, up to 100MB)
+- 📝 Build quizzes with multiple-choice questions
+- 💰 Earn 85% of every lesson sale (15% platform commission)
+- 💼 Teacher wallet with earnings tracking
+- 📱 WhatsApp contact link for students
+- 🎥 Multimedia management (video, image, audio, documents)
 
-### 🌐 General Features
-- **Responsive Design** - Optimized for desktop, tablet, and mobile
-- **Multi-role Authentication** - Secure login for different user types
-- **Email Confirmation** - Secure user registration process
-- **Navigation System** - Intuitive menu and page navigation
+### For Admins
+- ⚙️ Full platform dashboard
+- 👥 User management (students, teachers, admins)
+- 📊 Course oversight
+- 💳 Payment monitoring
+- ✅ Teacher approval workflow
 
-## 🛠️ Technology Stack
+---
 
-- **Frontend**: React 18.2.0, React Hooks, CSS3
-- **Routing**: React Router (client-side routing)
-- **State Management**: React useState, useEffect
-- **Storage**: LocalStorage (for demo purposes)
-- **Styling**: Custom CSS with responsive design
-- **Icons**: Emoji-based icons for cross-platform compatibility
+## 🛠️ Tech Stack
 
-## 📦 Installation
+### Frontend
+- **React 19** — UI framework
+- **Vite** — build tool
+- **React Router** — navigation
+- **Paystack Inline JS** — payment checkout
+- **Web Share API** — lesson sharing
+- **Screen Wake Lock API** — reliable uploads
 
-### Prerequisites
-- Node.js (version 14 or higher)
-- npm or yarn package manager
+### Backend
+- **Node.js** — runtime
+- **Express** — web framework
+- **MongoDB + Mongoose** — database
+- **JWT** — authentication
+- **Multer** — file uploads
+- **Brevo** — transactional emails
+- **Paystack API** — payment verification
 
-### Setup Instructions
+### Infrastructure
+- **Vercel** — frontend hosting
+- **Render** — backend hosting
+- **MongoDB Atlas** — database hosting
+- **Paystack** — payment gateway
+- **Brevo** — email delivery
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/codesmartng-stem.git
-   cd codesmartng-stem
+---
+
+## 📁 Project Structure
