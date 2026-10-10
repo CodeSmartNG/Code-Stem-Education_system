@@ -1,38 +1,77 @@
 // src/components/AIAssistant.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiCall } from '../utils/storageAPI';
 import './AIAssistant.css';
+
+const MAX_INPUT_LENGTH = 500;
 
 const AIAssistant = ({ currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [error, setError] = useState('');
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const abortRef = useRef(null);
+  const previousUserIdRef = useRef(null);
 
-  // ✅ Load saved conversation from sessionStorage
+  const userId = currentUser?._id || currentUser?.id || null;
+
+  // ============================================
+  // Reset chat when the logged-in user changes
+  // ============================================
   useEffect(() => {
-    const saved = sessionStorage.getItem('ai_conversation');
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch (err) {
-        // ignore
-      }
+    const prevId = previousUserIdRef.current;
+    if (prevId && prevId !== userId) {
+      // Different user in the same tab — wipe everything
+      setMessages([]);
+      setInput('');
+      setError('');
+      setIsLoading(false);
     }
-  }, []);
+    previousUserIdRef.current = userId;
+  }, [userId]);
 
-  // ✅ Save conversation
+  // ============================================
+  // Load history from the server (per-user, source of truth)
+  // ============================================
   useEffect(() => {
-    if (messages.length > 0) {
-      sessionStorage.setItem('ai_conversation', JSON.stringify(messages));
-    }
-  }, [messages]);
+    if (!isOpen || !userId) return;
 
-  // Auto-scroll to bottom
+    let cancelled = false;
+    setIsFetchingHistory(true);
+    setError('');
+
+    apiCall('/ai/history', { method: 'GET' })
+      .then((response) => {
+        if (cancelled) return;
+        if (response?.success && Array.isArray(response.messages)) {
+          setMessages(
+            response.messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('History load error:', err);
+        // Non-fatal — user can still chat
+      })
+      .finally(() => {
+        if (!cancelled) setIsFetchingHistory(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, userId]);
+
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -40,44 +79,70 @@ const AIAssistant = ({ currentUser }) => {
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      const t = setTimeout(() => inputRef.current?.focus(), 300);
+      return () => clearTimeout(t);
     }
   }, [isOpen]);
 
-  const sendMessage = async () => {
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
+  // Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
+
+  // ============================================
+  // Send message
+  // ============================================
+  const sendMessage = useCallback(async () => {
     const text = input.trim();
-    if (!text || isLoading) return;
+    if (!text || isLoading || !userId) return;
 
     setError('');
     setInput('');
 
-    // Add user message
     const userMessage = { role: 'user', content: text };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const optimisticMessages = [...messages, userMessage];
+    setMessages(optimisticMessages);
     setIsLoading(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const response = await apiCall('/ai/chat', {
         method: 'POST',
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({ messages: optimisticMessages }),
+        signal: controller.signal,
       });
 
-      if (response.success && response.reply) {
+      if (response?.success && response.reply) {
         setMessages((prev) => [
           ...prev,
           { role: 'assistant', content: response.reply },
         ]);
       } else {
-        throw new Error(response.message || 'No reply from AI');
+        throw new Error(response?.message || 'No reply from AI');
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error('AI error:', err);
       setError(err.message || 'Failed to get response. Please try again.');
     } finally {
       setIsLoading(false);
+      abortRef.current = null;
     }
-  };
+  }, [input, isLoading, messages, userId]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -86,11 +151,22 @@ const AIAssistant = ({ currentUser }) => {
     }
   };
 
-  const clearConversation = () => {
+  const handleInput = (e) => {
+    setInput(e.target.value);
+    // auto-grow textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  };
+
+  const clearConversation = async () => {
     if (!window.confirm('Clear conversation?')) return;
+    try {
+      await apiCall('/ai/history', { method: 'DELETE' });
+    } catch (err) {
+      console.error('Failed to clear history:', err);
+    }
     setMessages([]);
     setError('');
-    sessionStorage.removeItem('ai_conversation');
   };
 
   const suggestions = {
@@ -118,7 +194,6 @@ const AIAssistant = ({ currentUser }) => {
 
   return (
     <>
-      {/* ✅ Floating AI button */}
       <button
         className="ai-floating-btn"
         onClick={() => setIsOpen(!isOpen)}
@@ -128,12 +203,11 @@ const AIAssistant = ({ currentUser }) => {
         <span className="ai-icon">🤖</span>
       </button>
 
-      {/* ✅ Chat panel */}
       {isOpen && (
         <>
           <div className="ai-backdrop" onClick={() => setIsOpen(false)} />
 
-          <div className="ai-panel">
+          <div className="ai-panel" role="dialog" aria-label="AI Assistant">
             <div className="ai-header">
               <div className="ai-header-title">
                 <span className="ai-header-icon">🤖</span>
@@ -162,8 +236,12 @@ const AIAssistant = ({ currentUser }) => {
               </div>
             </div>
 
-            <div className="ai-messages">
-              {messages.length === 0 && (
+            <div className="ai-messages" role="log" aria-live="polite">
+              {isFetchingHistory && messages.length === 0 && (
+                <div className="ai-loading-history">Loading conversation…</div>
+              )}
+
+              {messages.length === 0 && !isFetchingHistory && (
                 <div className="ai-welcome">
                   <div className="ai-welcome-icon">👋</div>
                   <h3>Hi! I'm your AI assistant</h3>
@@ -200,9 +278,7 @@ const AIAssistant = ({ currentUser }) => {
                     {msg.role === 'user' ? '👤' : '🤖'}
                   </div>
                   <div className="ai-message-content">
-                    {msg.content.split('\n').map((line, j) => (
-                      <p key={j}>{line}</p>
-                    ))}
+                    {msg.content}
                   </div>
                 </div>
               ))}
@@ -233,11 +309,11 @@ const AIAssistant = ({ currentUser }) => {
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInput}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything... (Enter to send, Shift+Enter for new line)"
                 rows={1}
-                maxLength={500}
+                maxLength={MAX_INPUT_LENGTH}
                 disabled={isLoading}
               />
               <button
