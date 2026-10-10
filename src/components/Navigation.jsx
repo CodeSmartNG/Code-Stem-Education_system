@@ -287,7 +287,10 @@ const Navigation = ({
         </div>
       </nav>
 
-      {/* ✅ Floating Chat Button — WhatsApp AI style */}
+  
+      
+
+            {/* ✅ Floating Chat Button — WhatsApp AI style */}
       {currentUser && (
         <button
           className="floating-chat-btn"
@@ -311,30 +314,6 @@ const Navigation = ({
           </svg>
         </button>
       )}
-
-      return (
-  <div className="App">
-    <InactivityWarning />
-
-    {currentUser && (
-      <Navigation 
-        currentView={currentView} 
-        setCurrentView={setCurrentView} 
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        isAdmin={currentUser.role === 'admin'}
-        isTeacher={currentUser.role === 'teacher'}
-        isStudent={currentUser.role === 'student'}
-      />
-    )}
-
-    {currentUser && <AIAssistant currentUser={currentUser} />}
-
-    <main className="main-content">
-      {renderView()}
-    </main>
-  </div>
-);
     </>
   );
 };
