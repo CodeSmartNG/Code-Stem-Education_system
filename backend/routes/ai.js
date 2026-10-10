@@ -146,12 +146,15 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
     const role = req.user.role || 'student';
     const systemPrompt = systemPrompts[role] || systemPrompts.student;
 
-    const MODEL = 'gemini-3.8-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
+    
+    // ... (above: build `contents`, `systemPrompt`, `role`)
 
-    const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 60000); // ✅ 60s instead of 20s
+const MODEL = 'gemini-3.8-flash';
+const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 60000);
 
 let response;
 try {
@@ -165,10 +168,8 @@ try {
       },
       contents,
       generationConfig: {
-        thinkingConfig: {
-          thinkingLevel: 'low',   // ✅ 'low' is much faster than 'medium'
-        },
         maxOutputTokens: 1024,
+        // ✅ Start with no thinkingConfig. Add later if needed.
       },
     }),
   });
@@ -193,14 +194,17 @@ if (!response.ok) {
     message: data.error?.message || 'AI request failed',
   });
 }
+
+const aiText =
+  data.candidates?.[0]?.content?.parts
+    ?.map((p) => p.text)
+    .filter(Boolean)
+    .join('') || null;
+
+
+
+
     
-
-    const aiText =
-      data.candidates?.[0]?.content?.parts
-        ?.map((p) => p.text)
-        .filter(Boolean)
-        .join('') || null;
-
     if (!aiText) {
       console.error('❌ No text in response:', JSON.stringify(data).slice(0, 500));
       return res.status(500).json({
