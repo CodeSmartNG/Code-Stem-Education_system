@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { auth } = require('../middleware/auth');
-const Message = require('../models/Message');
 
+const AIMessage = require('../models/AIMessage');
 // ============================================
 // RATE LIMIT — per USER, not per IP
 // ============================================
