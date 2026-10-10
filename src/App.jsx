@@ -28,7 +28,7 @@ import Support from './components/Support';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import { forgotPassword, resetPassword } from './utils/storageAPI';
-
+import AIAssistant from './components/AIAssistant';
 
 // ✅ IMPORT FROM CUSTOM BACKEND API (NOT FIREBASE)
 import { 
