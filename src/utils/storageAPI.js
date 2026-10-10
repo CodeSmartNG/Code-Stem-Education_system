@@ -13,38 +13,66 @@ export const apiCall = async (endpoint, options = {}) => {
     'https://code-stem-education-system.onrender.com/api';
 
   const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...(options.body && !(options.body instanceof FormData) && {
+      'Content-Type': 'application/json',
+    }),
+    ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   };
 
   const config = {
-  ...options,
-  headers,
-};
+    ...options,
+    headers,
+  };
 
-// If FormData, remove Content-Type
-if (options.body instanceof FormData) {
-  delete config.headers['Content-Type'];
-}
+  if (options.body instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
 
-// 🐛 DEBUG — log every request
-console.log(`📡 ${options.method || 'GET'} ${API_URL}${endpoint}`, {
-  body: options.body,
-  hasToken: !!token,
-});
+  const DEBUG = import.meta.env.DEV;
+  if (DEBUG) {
+    console.log(`📡 ${options.method || 'GET'} ${API_URL}${endpoint}`, {
+      hasToken: !!token,
+    });
+  }
 
-const response = await fetch(`${API_URL}${endpoint}`, config);
-const data = await response.json();
+  let response;
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, config);
+  } catch (networkErr) {
+    // Network / CORS / DNS failure
+    console.error('❌ Network error:', networkErr);
+    throw new Error(
+      networkErr.name === 'AbortError'
+        ? 'Request cancelled'
+        : 'Cannot reach server. Check your connection.'
+    );
+  }
 
-// 🐛 DEBUG — log every response
-console.log(`📥 ${response.status} ${endpoint}`, data);
-  
+  // ✅ Safe parse — never crash on HTML/empty/text responses
+  let data = null;
+  const contentType = response.headers.get('content-type') || '';
+  try {
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = text ? { message: text.slice(0, 300) } : null;
+    }
+  } catch {
+    data = null;
+  }
+
+  if (DEBUG) {
+    console.log(`📥 ${response.status} ${endpoint}`, data);
+  }
+
   if (!response.ok) {
-  const statusText = `[${response.status}]`;
-  const message = data?.message || data?.error || 'API request failed';
-  throw new Error(`${statusText} ${message}`);
-}
+    const statusText = `[${response.status}]`;
+    const message =
+      data?.message || data?.error || response.statusText || 'API request failed';
+    throw new Error(`${statusText} ${message}`);
+  }
 
   return data;
 };
