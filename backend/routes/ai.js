@@ -1,16 +1,26 @@
 // backend/routes/ai.js
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { auth } = require('../middleware/auth');
 
-// ✅ Rate limit: 15 messages per minute
+const AIMessage = require('../models/AIMessage');
+// ============================================
+// RATE LIMIT — per USER, not per IP
+// ============================================
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
-  message: { success: false, message: 'Too many requests. Please wait a minute.' },
   standardHeaders: true,
   legacyHeaders: false,
+  // Key by user ID when authenticated, fall back to IP
+  keyGenerator: (req) => {
+    return req.user?._id?.toString() || req.ip;
+  },
+  message: {
+    success: false,
+    message: 'Too many requests. Please wait a minute.',
+  },
 });
 
 // ============================================
@@ -35,19 +45,66 @@ Be factual. If you don't have data, say so. Suggest how to get it.`,
 };
 
 // ============================================
+// HELPERS
+// ============================================
+const MAX_HISTORY_MESSAGES = 20;   // how many past messages we send to Gemini
+const MAX_MESSAGE_LENGTH = 4000;   // per-message character cap
+
+function sanitizeMessages(rawMessages) {
+  if (!Array.isArray(rawMessages)) return [];
+  return rawMessages
+    .filter((m) => m && typeof m.content === 'string' && m.content.trim())
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content.slice(0, MAX_MESSAGE_LENGTH),
+    }));
+}
+
+// ============================================
+// GET /api/ai/history
+// Returns ONLY the caller's messages.
+// ============================================
+router.get('/history', auth, async (req, res) => {
+  try {
+    const messages = await Message.find({ userId: req.user._id })
+      .sort({ createdAt: 1 })
+      .limit(100)
+      .lean();
+
+    return res.json({
+      success: true,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('❌ History error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load history' });
+  }
+});
+
+// ============================================
+// DELETE /api/ai/history
+// Deletes ONLY the caller's messages.
+// ============================================
+router.delete('/history', auth, async (req, res) => {
+  try {
+    await Message.deleteMany({ userId: req.user._id });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Delete history error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to clear history' });
+  }
+});
+
+// ============================================
 // POST /api/ai/chat
 // ============================================
 router.post('/chat', auth, aiLimiter, async (req, res) => {
   try {
-    const { messages } = req.body;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Messages array is required',
-      });
-    }
-
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({
@@ -56,33 +113,70 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       });
     }
 
-    // ✅ Get system prompt based on user role
+    // ✅ Never trust client-supplied history. Load from DB.
+    const { messages: rawMessages } = req.body;
+    const incoming = sanitizeMessages(rawMessages);
+
+    if (incoming.length === 0 || incoming[incoming.length - 1].role !== 'user') {
+      return res.status(400).json({
+        success: false,
+        message: 'A user message is required',
+      });
+    }
+
+    // The latest user message is what we persist + send.
+    const userText = incoming[incoming.length - 1].content;
+
+    // ✅ Save the user message to DB, scoped to the authenticated user.
+    await Message.create({
+      userId: req.user._id,
+      role: 'user',
+      content: userText,
+    });
+
+    // ✅ Build Gemini conversation from DB (source of truth), not from the client.
+    const dbHistory = await Message.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(MAX_HISTORY_MESSAGES)
+      .lean();
+
+    // Reverse to chronological order
+    dbHistory.reverse();
+
+    const contents = dbHistory.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
     const role = req.user.role || 'student';
     const systemPrompt = systemPrompts[role] || systemPrompts.student;
 
-    // ✅ Build the input array for the new Interactions API
-    // Combine system prompt + all messages into a single input string
-    const conversationText = messages
-      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n\n');
+    const MODEL = 'gemini-3.8-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
-    const fullInput = `${systemPrompt}\n\n--- CONVERSATION ---\n\n${conversationText}\n\nAssistant:`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
 
-    // ✅ Call the NEW Interactions API endpoint
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/interactions',
-      {
+    let response;
+    try {
+      response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
-          model: 'gemini-3.8-flash',
-          input: fullInput,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          contents,
+          generationConfig: {
+            thinking_level: 'medium',
+            maxOutputTokens: 1024,
+          },
         }),
-      }
-    );
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const data = await response.json();
 
@@ -90,32 +184,15 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       console.error('❌ Gemini error:', data);
       return res.status(response.status).json({
         success: false,
-        message: data.error?.message || data.message || 'AI request failed',
+        message: data.error?.message || 'AI request failed',
       });
     }
 
-    // ✅ Extract AI response from the new format
-    // The new API returns: { steps: [{ type: 'model_output', content: [{ type: 'text', text: '...' }] }] }
-    let aiText = null;
-
-    if (data.steps && Array.isArray(data.steps)) {
-      for (const step of data.steps) {
-        if (step.type === 'model_output' && Array.isArray(step.content)) {
-          for (const block of step.content) {
-            if (block.type === 'text' && block.text) {
-              aiText = block.text;
-              break;
-            }
-          }
-        }
-        if (aiText) break;
-      }
-    }
-
-    // Fallback: try the old format just in case
-    if (!aiText && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      aiText = data.candidates[0].content.parts[0].text;
-    }
+    const aiText =
+      data.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text)
+        .filter(Boolean)
+        .join('') || null;
 
     if (!aiText) {
       console.error('❌ No text in response:', JSON.stringify(data).slice(0, 500));
@@ -125,17 +202,22 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       });
     }
 
-    console.log(`🤖 AI [${role}]:`, aiText.slice(0, 80) + '...');
-
-    return res.json({
-      success: true,
-      reply: aiText,
+    // ✅ Persist assistant reply
+    await Message.create({
+      userId: req.user._id,
+      role: 'assistant',
+      content: aiText.slice(0, 8000),
     });
+
+    return res.json({ success: true, reply: aiText });
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return res.status(504).json({ success: false, message: 'AI request timed out' });
+    }
     console.error('❌ AI route error:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'AI request failed',
+      message: 'AI request failed',
     });
   }
 });
