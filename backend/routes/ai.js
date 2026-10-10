@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const { auth } = require('../middleware/auth');
 
 const AIMessage = require('../models/AIMessage');
+
 // ============================================
 // RATE LIMIT — per USER, not per IP
 // ============================================
@@ -13,7 +14,6 @@ const aiLimiter = rateLimit({
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  // Key by user ID when authenticated, fall back to IP
   keyGenerator: (req) => {
     return req.user?._id?.toString() || req.ip;
   },
@@ -47,8 +47,8 @@ Be factual. If you don't have data, say so. Suggest how to get it.`,
 // ============================================
 // HELPERS
 // ============================================
-const MAX_HISTORY_MESSAGES = 20;   // how many past messages we send to Gemini
-const MAX_MESSAGE_LENGTH = 4000;   // per-message character cap
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 4000;
 
 function sanitizeMessages(rawMessages) {
   if (!Array.isArray(rawMessages)) return [];
@@ -63,11 +63,10 @@ function sanitizeMessages(rawMessages) {
 
 // ============================================
 // GET /api/ai/history
-// Returns ONLY the caller's messages.
 // ============================================
 router.get('/history', auth, async (req, res) => {
   try {
-    const messages = await Message.find({ userId: req.user._id })
+    const messages = await AIMessage.find({ userId: req.user._id })
       .sort({ createdAt: 1 })
       .limit(100)
       .lean();
@@ -88,11 +87,10 @@ router.get('/history', auth, async (req, res) => {
 
 // ============================================
 // DELETE /api/ai/history
-// Deletes ONLY the caller's messages.
 // ============================================
 router.delete('/history', auth, async (req, res) => {
   try {
-    await Message.deleteMany({ userId: req.user._id });
+    await AIMessage.deleteMany({ userId: req.user._id });
     return res.json({ success: true });
   } catch (error) {
     console.error('❌ Delete history error:', error);
@@ -113,7 +111,6 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       });
     }
 
-    // ✅ Never trust client-supplied history. Load from DB.
     const { messages: rawMessages } = req.body;
     const incoming = sanitizeMessages(rawMessages);
 
@@ -124,23 +121,21 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       });
     }
 
-    // The latest user message is what we persist + send.
     const userText = incoming[incoming.length - 1].content;
 
-    // ✅ Save the user message to DB, scoped to the authenticated user.
-    await Message.create({
+    // ✅ Save user message
+    await AIMessage.create({
       userId: req.user._id,
       role: 'user',
       content: userText,
     });
 
-    // ✅ Build Gemini conversation from DB (source of truth), not from the client.
-    const dbHistory = await Message.find({ userId: req.user._id })
+    // ✅ Load history from DB (source of truth)
+    const dbHistory = await AIMessage.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
       .limit(MAX_HISTORY_MESSAGES)
       .lean();
 
-    // Reverse to chronological order
     dbHistory.reverse();
 
     const contents = dbHistory.map((m) => ({
@@ -202,30 +197,27 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       });
     }
 
-    // ✅ Persist assistant reply
-    await Message.create({
+    // ✅ Save assistant reply
+    await AIMessage.create({
       userId: req.user._id,
       role: 'assistant',
       content: aiText.slice(0, 8000),
     });
 
     return res.json({ success: true, reply: aiText });
-    
-} catch (error) {
-  console.error('========================================');
-  console.error('❌ AI ROUTE ERROR');
-  console.error('Name:', error.name);
-  console.error('Message:', error.message);
-  console.error('Stack:', error.stack);
-  console.error('========================================');
+  } catch (error) {
+    console.error('========================================');
+    console.error('❌ AI ROUTE ERROR');
+    console.error('Name:', error.name);
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('========================================');
 
-  return res.status(500).json({
-    success: false,
-    message: process.env.NODE_ENV === 'production'
-      ? `AI error: ${error.message}`   // ✅ show real error even in prod for now
-      : error.message,
-  });
-}
+    return res.status(500).json({
+      success: false,
+      message: `AI error: ${error.message}`,
+    });
+  }
 });
 
 module.exports = router;
