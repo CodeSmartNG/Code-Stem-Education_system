@@ -149,41 +149,51 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
     const MODEL = 'gemini-3.8-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+const timeout = setTimeout(() => controller.abort(), 60000); // ✅ 60s instead of 20s
 
-    let response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemPrompt }],
-          },
-          contents,
-          generationConfig: {
-  thinkingConfig: {          // ✅ Correct nesting
-    thinkingLevel: 'medium'  // ✅ camelCase
-  },
-  maxOutputTokens: 1024,
-},
-        }),
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
+let response;
+try {
+  response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: controller.signal,
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents,
+      generationConfig: {
+        thinkingConfig: {
+          thinkingLevel: 'low',   // ✅ 'low' is much faster than 'medium'
+        },
+        maxOutputTokens: 1024,
+      },
+    }),
+  });
+} catch (fetchErr) {
+  clearTimeout(timeout);
+  console.error('❌ Fetch failed:', fetchErr.name, fetchErr.message);
+  return res.status(504).json({
+    success: false,
+    message: fetchErr.name === 'AbortError'
+      ? 'AI took too long. Please try again.'
+      : `Network error: ${fetchErr.message}`,
+  });
+}
+clearTimeout(timeout);
 
-    const data = await response.json();
+const data = await response.json();
 
-    if (!response.ok) {
-      console.error('❌ Gemini error:', data);
-      return res.status(response.status).json({
-        success: false,
-        message: data.error?.message || 'AI request failed',
-      });
-    }
+if (!response.ok) {
+  console.error('❌ Gemini error:', data);
+  return res.status(response.status).json({
+    success: false,
+    message: data.error?.message || 'AI request failed',
+  });
+}
+    
 
     const aiText =
       data.candidates?.[0]?.content?.parts
