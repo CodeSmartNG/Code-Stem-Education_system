@@ -212,16 +212,18 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
     return res.json({ success: true, reply: aiText });
     
 } catch (error) {
-  console.error('❌ AI route error:', error);
-  console.error('❌ Name:', error.name);
-  console.error('❌ Message:', error.message);
-  console.error('❌ Stack:', error.stack);
+  console.error('========================================');
+  console.error('❌ AI ROUTE ERROR');
+  console.error('Name:', error.name);
+  console.error('Message:', error.message);
+  console.error('Stack:', error.stack);
+  console.error('========================================');
 
   return res.status(500).json({
     success: false,
     message: process.env.NODE_ENV === 'production'
-      ? 'AI request failed'
-      : error.message,      // ✅ real reason in dev
+      ? `AI error: ${error.message}`   // ✅ show real error even in prod for now
+      : error.message,
   });
 }
 });
