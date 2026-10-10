@@ -311,6 +311,30 @@ const Navigation = ({
           </svg>
         </button>
       )}
+
+      return (
+  <div className="App">
+    <InactivityWarning />
+
+    {currentUser && (
+      <Navigation 
+        currentView={currentView} 
+        setCurrentView={setCurrentView} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        isAdmin={currentUser.role === 'admin'}
+        isTeacher={currentUser.role === 'teacher'}
+        isStudent={currentUser.role === 'student'}
+      />
+    )}
+
+    {currentUser && <AIAssistant currentUser={currentUser} />}
+
+    <main className="main-content">
+      {renderView()}
+    </main>
+  </div>
+);
     </>
   );
 };
