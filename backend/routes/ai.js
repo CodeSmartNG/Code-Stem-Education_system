@@ -164,9 +164,11 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
           },
           contents,
           generationConfig: {
-            thinking_level: 'medium',
-            maxOutputTokens: 1024,
-          },
+  thinkingConfig: {          // ✅ Correct nesting
+    thinkingLevel: 'medium'  // ✅ camelCase
+  },
+  maxOutputTokens: 1024,
+},
         }),
       });
     } finally {
