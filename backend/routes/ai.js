@@ -221,19 +221,20 @@ const aiText =
     });
 
     return res.json({ success: true, reply: aiText });
+    
   } catch (error) {
-    console.error('========================================');
-    console.error('❌ AI ROUTE ERROR');
-    console.error('Name:', error.name);
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('========================================');
+  console.error('========================================');
+  console.error('❌ AI ROUTE ERROR');
+  console.error('Name:', error.name);
+  console.error('Message:', error.message);
+  console.error('Stack:', error.stack);
+  console.error('========================================');
 
-    return res.status(500).json({
-      success: false,
-      message: `AI error: ${error.message}`,
-    });
-  }
+  return res.status(500).json({
+    success: false,
+    message: 'AI request failed. Please try again.',
+  });
+}
 });
 
 module.exports = router;
