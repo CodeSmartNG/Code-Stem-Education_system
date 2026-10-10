@@ -287,7 +287,10 @@ const Navigation = ({
         </div>
       </nav>
 
-      {/* ✅ Floating Chat Button — WhatsApp AI style */}
+  
+      
+
+            {/* ✅ Floating Chat Button — WhatsApp AI style */}
       {currentUser && (
         <button
           className="floating-chat-btn"
