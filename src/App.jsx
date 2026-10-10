@@ -1193,6 +1193,9 @@ case 'reset-password':
           isStudent={currentUser.role === 'student'}
         />
       )}
+
+      {/* ✅ AI Assistant — floating button */}
+{currentUser && <AIAssistant currentUser={currentUser} />}
       <main className="main-content">
         {renderView()}
       </main>
