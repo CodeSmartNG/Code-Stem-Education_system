@@ -12,6 +12,7 @@ dotenv.config();
 
 // ✅ Register all models at startup so populate() works
 require('./models/Message');
+require('./models/AIMessage');
 require('./models/Presence');
 require('./models/User');
 require('./models/Course');
