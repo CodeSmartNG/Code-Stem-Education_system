@@ -1,5 +1,4 @@
 // middleware/upload.js
-
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -41,10 +40,10 @@ const mediaStorage = multer.diskStorage({
 // File filter for videos
 const videoFilter = (req, file, cb) => {
   const allowedTypes = [
-    'video/mp4', 'video/webm', 'video/ogg', 
+    'video/mp4', 'video/webm', 'video/ogg',
     'video/quicktime', 'video/x-msvideo'
   ];
-  
+
   if (allowedTypes.includes(file.mimetype) || file.mimetype.startsWith('video/')) {
     cb(null, true);
   } else {
@@ -52,34 +51,47 @@ const videoFilter = (req, file, cb) => {
   }
 };
 
-// File filter for multimedia
+// ✅ File filter for multimedia — NOW INCLUDES VIDEO
 const mediaFilter = (req, file, cb) => {
   const allowedTypes = {
+    video: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
     image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
     audio: ['audio/mpeg', 'audio/ogg', 'audio/wav'],
-    document: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+    document: [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ]
   };
 
   const allAllowed = [
+    ...allowedTypes.video,
     ...allowedTypes.image,
     ...allowedTypes.audio,
     ...allowedTypes.document
   ];
 
-  if (allAllowed.includes(file.mimetype) || 
-      file.mimetype.startsWith('image/') ||
-      file.mimetype.startsWith('audio/')) {
+  if (
+    allAllowed.includes(file.mimetype) ||
+    file.mimetype.startsWith('video/') ||
+    file.mimetype.startsWith('image/') ||
+    file.mimetype.startsWith('audio/')
+  ) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images, audio, and documents are allowed.'), false);
+    cb(
+      new Error('Invalid file type. Only videos, images, audio, and documents are allowed.'),
+      false
+    );
   }
 };
 
-// Upload instances
+// ✅ Upload instances — videos now capped at 50 MB
 const uploadVideo = multer({
   storage: videoStorage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB
+    fileSize: 50 * 1024 * 1024 // 50 MB (matches frontend)
   },
   fileFilter: videoFilter
 });
@@ -87,7 +99,7 @@ const uploadVideo = multer({
 const uploadMedia = multer({
   storage: mediaStorage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB
+    fileSize: 50 * 1024 * 1024 // 50 MB
   },
   fileFilter: mediaFilter
 });
