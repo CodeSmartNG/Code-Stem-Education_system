@@ -183,7 +183,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);            // ✅ Only ONE registration, AFTER json
-
+app.use('/api/ai', aiRoutes);
 // ============================================
 // ✅ DEBUG: List all registered routes
 // ============================================
