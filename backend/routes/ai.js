@@ -4,7 +4,7 @@ const router = express.Router();
 const { auth } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
-// ✅ Rate limit: 15 messages per minute per IP
+// ✅ Rate limit: 15 messages per minute
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -60,36 +60,26 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
     const role = req.user.role || 'student';
     const systemPrompt = systemPrompts[role] || systemPrompts.student;
 
-    // ✅ Format messages for Gemini
-    // Gemini uses "user" and "model" roles
-    const contents = [
-      {
-        role: 'user',
-        parts: [{ text: systemPrompt + '\n\nAcknowledge briefly and wait for my question.' }],
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'Understood. Ready to help.' }],
-      },
-      ...messages.map((m) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }],
-      })),
-    ];
+    // ✅ Build the input array for the new Interactions API
+    // Combine system prompt + all messages into a single input string
+    const conversationText = messages
+      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
 
-    // ✅ Call Gemini API
+    const fullInput = `${systemPrompt}\n\n--- CONVERSATION ---\n\n${conversationText}\n\nAssistant:`;
+
+    // ✅ Call the NEW Interactions API endpoint
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/interactions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 800,
-            topP: 0.95,
-          },
+          model: 'gemini-3.8-flash',
+          input: fullInput,
         }),
       }
     );
@@ -100,13 +90,35 @@ router.post('/chat', auth, aiLimiter, async (req, res) => {
       console.error('❌ Gemini error:', data);
       return res.status(response.status).json({
         success: false,
-        message: data.error?.message || 'AI request failed',
+        message: data.error?.message || data.message || 'AI request failed',
       });
     }
 
-    // ✅ Extract AI response
-    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // ✅ Extract AI response from the new format
+    // The new API returns: { steps: [{ type: 'model_output', content: [{ type: 'text', text: '...' }] }] }
+    let aiText = null;
+
+    if (data.steps && Array.isArray(data.steps)) {
+      for (const step of data.steps) {
+        if (step.type === 'model_output' && Array.isArray(step.content)) {
+          for (const block of step.content) {
+            if (block.type === 'text' && block.text) {
+              aiText = block.text;
+              break;
+            }
+          }
+        }
+        if (aiText) break;
+      }
+    }
+
+    // Fallback: try the old format just in case
+    if (!aiText && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      aiText = data.candidates[0].content.parts[0].text;
+    }
+
     if (!aiText) {
+      console.error('❌ No text in response:', JSON.stringify(data).slice(0, 500));
       return res.status(500).json({
         success: false,
         message: 'AI returned no response',
