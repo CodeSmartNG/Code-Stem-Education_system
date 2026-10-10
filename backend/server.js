@@ -33,6 +33,7 @@ const quizRoutes = require('./routes/quizzes');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
 const chatRoutes = require('./routes/chat');
+const aiRoutes = require('./routes/ai');
 
 // Import error handler
 const errorHandler = require('./middleware/errorHandler');
