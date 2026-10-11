@@ -343,13 +343,47 @@ router.put('/:id', [auth, isTeacher], async (req, res) => {
       });
     }
 
-    const normalized = normalizeLesson(lesson);
+    // ============================================
+// 🔔 Notify enrolled students about the update
+// ============================================
+try {
+  const Notification = require('../models/Notification');
+  const course = await Course.findById(lesson.courseId);
 
-    res.json({
-      success: true,
-      lesson: normalized,
-      data: normalized
-    });
+  if (course) {
+    const enrolledIds = (course.enrolledStudentIds || []).map((id) =>
+      id.toString()
+    );
+
+    if (enrolledIds.length > 0) {
+      const notifications = enrolledIds.map((studentId) => ({
+        recipient: studentId,
+        type: 'new_lesson',
+        title: 'Lesson Updated',
+        message: `"${lesson.title}" in ${course.title} was updated`,
+        link: `/courses/${lesson.courseId}`,
+        isRead: false,
+        metadata: {
+          courseId: lesson.courseId.toString(),
+          lessonId: lesson._id.toString(),
+        },
+      }));
+
+      await Notification.insertMany(notifications);
+      console.log(`✅ Notified ${notifications.length} students about update`);
+    }
+  }
+} catch (notifyError) {
+  console.error('⚠️ Notification failed on update:', notifyError.message);
+}
+
+const normalized = normalizeLesson(lesson);
+
+res.json({
+  success: true,
+  lesson: normalized,
+  data: normalized
+});
   } catch (error) {
     console.error('Update lesson error:', error);
     res.status(500).json({
