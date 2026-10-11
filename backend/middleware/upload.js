@@ -1,47 +1,77 @@
 // middleware/upload.js
 const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Ensure upload directories exist
-const ensureDirectoryExists = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-};
-
-// Video upload configuration
-const videoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads/videos');
-    ensureDirectoryExists(uploadDir);
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
+// ============================================
+// CLOUDINARY CONFIG
+// ============================================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 });
 
-// Multimedia upload configuration
-const mediaStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads/media');
-    ensureDirectoryExists(uploadDir);
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
+if (
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
+  console.error(
+    '❌ Cloudinary env vars missing! Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET'
+  );
+}
+
+// ============================================
+// VIDEO STORAGE
+// ============================================
+const videoStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: 'codesmart/videos',
+    resource_type: 'video',                                  // ✅ critical for videos
+    allowed_formats: ['mp4', 'webm', 'ogg', 'mov', 'avi'],
+    public_id: `video_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  }),
 });
 
-// File filter for videos
+// ============================================
+// MEDIA STORAGE — images, audio, docs, video
+// ============================================
+const mediaStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => {
+    const isImage = file.mimetype.startsWith('image/');
+    const isAudio = file.mimetype.startsWith('audio/');
+    const isVideo = file.mimetype.startsWith('video/');
+
+    // Cloudinary resource_type mapping:
+    //  - image  → images
+    //  - video  → videos AND audio
+    //  - raw    → pdf, docx, txt, etc.
+    let resourceType = 'raw';
+    if (isImage) resourceType = 'image';
+    else if (isVideo || isAudio) resourceType = 'video';
+
+    return {
+      folder: 'codesmart/media',
+      resource_type: resourceType,
+      public_id: `media_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    };
+  },
+});
+
+// ============================================
+// FILE FILTERS (still useful — reject before upload)
+// ============================================
 const videoFilter = (req, file, cb) => {
   const allowedTypes = [
-    'video/mp4', 'video/webm', 'video/ogg',
-    'video/quicktime', 'video/x-msvideo'
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+    'video/x-msvideo',
   ];
 
   if (allowedTypes.includes(file.mimetype) || file.mimetype.startsWith('video/')) {
@@ -51,29 +81,19 @@ const videoFilter = (req, file, cb) => {
   }
 };
 
-// ✅ File filter for multimedia — NOW INCLUDES VIDEO
 const mediaFilter = (req, file, cb) => {
-  const allowedTypes = {
-    video: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
-    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-    audio: ['audio/mpeg', 'audio/ogg', 'audio/wav'],
-    document: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain'
-    ]
-  };
-
-  const allAllowed = [
-    ...allowedTypes.video,
-    ...allowedTypes.image,
-    ...allowedTypes.audio,
-    ...allowedTypes.document
+  const allowedTypes = [
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    'audio/mpeg', 'audio/ogg', 'audio/wav',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
   ];
 
   if (
-    allAllowed.includes(file.mimetype) ||
+    allowedTypes.includes(file.mimetype) ||
     file.mimetype.startsWith('video/') ||
     file.mimetype.startsWith('image/') ||
     file.mimetype.startsWith('audio/')
@@ -87,21 +107,19 @@ const mediaFilter = (req, file, cb) => {
   }
 };
 
-// ✅ Upload instances — videos now capped at 50 MB
+// ============================================
+// MULTER INSTANCES
+// ============================================
 const uploadVideo = multer({
   storage: videoStorage,
-  limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB (matches frontend)
-  },
-  fileFilter: videoFilter
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter: videoFilter,
 });
 
 const uploadMedia = multer({
   storage: mediaStorage,
-  limits: {
-    fileSize: 50 * 1024 * 1024 // 50 MB
-  },
-  fileFilter: mediaFilter
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter: mediaFilter,
 });
 
-module.exports = { uploadVideo, uploadMedia };
+module.exports = { uploadVideo, uploadMedia, cloudinary };
