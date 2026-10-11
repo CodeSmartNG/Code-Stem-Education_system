@@ -258,12 +258,46 @@ router.post('/', [auth, isTeacher], async (req, res) => {
 
     console.log('✅ Lesson created:', lesson._id);
 
-    await Course.findByIdAndUpdate(courseId, {
-      $push: { lessonIds: lesson._id }
-    });
+await Course.findByIdAndUpdate(courseId, {
+  $push: { lessonIds: lesson._id }
+});
 
-    const normalized = normalizeLesson(lesson);
+// ============================================
+// 🔔 Notify all enrolled students
+// ============================================
+try {
+  const Notification = require('../models/Notification');
 
+  const enrolledIds = (course.enrolledStudentIds || []).map((id) =>
+    id.toString()
+  );
+
+  console.log('🔔 Enrolled students:', enrolledIds.length);
+
+  if (enrolledIds.length > 0) {
+    const notifications = enrolledIds.map((studentId) => ({
+      recipient: studentId,
+      type: 'new_lesson',
+      title: 'New Lesson Added',
+      message: `"${lesson.title}" was added to ${course.title}`,
+      link: `/courses/${courseId}`,
+      isRead: false,
+      metadata: {
+        courseId: courseId.toString(),
+        lessonId: lesson._id.toString(),
+      },
+    }));
+
+    await Notification.insertMany(notifications);
+    console.log(`✅ Notified ${notifications.length} students`);
+  } else {
+    console.log('⚠️ No students enrolled yet — no notifications sent');
+  }
+} catch (notifyError) {
+  console.error('⚠️ Notification failed:', notifyError.message);
+}
+
+const normalized = normalizeLesson(lesson);
     res.status(201).json({
       success: true,
       message: 'Lesson created successfully',
