@@ -939,7 +939,9 @@ export const getAllTransactions = async () => [];
 export const getNotifications = async () => {
   try {
     const response = await apiCall('/notifications');
-    return response.notifications || response.data || [];
+    // Backend returns a raw array; be tolerant of both shapes
+    if (Array.isArray(response)) return response;
+    return response?.notifications || response?.data || [];
   } catch (error) {
     console.error('Error getting notifications:', error);
     return [];
