@@ -503,8 +503,10 @@ const downloadURL = uploadResult.url || uploadResult.fileUrl;
         firebasePath: filePath,
       };
 
-      await addMultimediaToLesson(lessonId, multimediaData);
-      console.log('✅ Video attached to lesson');
+      console.log('📤 Sending multimedia:', multimediaData);
+console.log('📤 For lesson:', lessonId);
+await addMultimediaToLesson(lessonId, multimediaData);
+console.log('✅ Video attached to lesson');
     } else {
       console.warn('⚠️ No user ID — skipping video upload');
     }
