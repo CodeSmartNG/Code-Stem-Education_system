@@ -174,16 +174,23 @@ const uploadVideoWithProgress = (file, onProgress) => {
     });
 
     xhr.addEventListener('load', () => {
-      if (xhr.status === 200) {
-        try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch (err) {
-          reject(new Error('Invalid server response'));
-        }
-      } else {
-        reject(new Error(`Upload failed (${xhr.status})`));
-      }
-    });
+  if (xhr.status === 200) {
+    try {
+      resolve(JSON.parse(xhr.responseText));
+    } catch (err) {
+      reject(new Error('Invalid server response'));
+    }
+  } else {
+    let detail = '';
+    try {
+      const err = JSON.parse(xhr.responseText);
+      detail = err.message || err.error || '';
+    } catch {
+      detail = xhr.responseText ? xhr.responseText.slice(0, 200) : '';
+    }
+    reject(new Error(`Upload failed (${xhr.status}): ${detail}`));
+  }
+});
 
     xhr.addEventListener('error', () => reject(new Error('Network error')));
 
@@ -502,10 +509,15 @@ const downloadURL = uploadResult.url || uploadResult.fileUrl;
       console.warn('⚠️ No user ID — skipping video upload');
     }
   } catch (videoError) {
-    console.warn('⚠️ Video upload failed (lesson still saved):', videoError.message);
-  } finally {
-    await releaseWakeLock();   // ✅ Always release
-  }
+  console.error('❌ Video upload failed:', videoError);
+  alert(
+    'Lesson saved, but video upload failed:\n\n' +
+    videoError.message +
+    '\n\nYou can add the video later from Manage Media.'
+  );
+} finally {
+  await releaseWakeLock();
+}
 }
 
       // ---------- Step 3: Optional — attach quiz ----------
