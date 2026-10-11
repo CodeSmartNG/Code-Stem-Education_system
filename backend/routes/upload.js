@@ -117,4 +117,35 @@ router.post('/multimedia', auth, uploadMedia.single('file'), async (req, res) =>
   }
 });
 
+// ============================================
+// DELETE — remove a file from Cloudinary
+// ============================================
+router.delete('/:publicId(*)', auth, async (req, res) => {
+  try {
+    const publicId = req.params.publicId;
+    const resourceType = req.query.type || 'video'; // 'video' | 'image' | 'raw'
+
+    if (!publicId) {
+      return res.status(400).json({ success: false, message: 'publicId is required' });
+    }
+
+    const cloudinary = require('../middleware/upload').cloudinary;
+
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+      invalidate: true, // also purge from CDN cache
+    });
+
+    console.log('🗑️ Deleted from Cloudinary:', publicId, '→', result.result);
+
+    if (result.result !== 'ok' && result.result !== 'not found') {
+      return res.status(500).json({ success: false, message: 'Delete failed', result });
+    }
+
+    return res.json({ success: true, result: result.result });
+  } catch (error) {
+    console.error('❌ Delete error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
 module.exports = router;
