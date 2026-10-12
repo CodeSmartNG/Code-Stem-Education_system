@@ -576,11 +576,14 @@ const CourseCatalog = ({ student, setStudent }) => {
         ) : (
           <>
             {lessonMultimedia && lessonMultimedia.length > 0 && (
-              <div className="multimedia-container">
-                <h3>📹 Lesson Materials</h3>
-                <MultimediaViewer multimedia={lessonMultimedia} />
-              </div>
-            )}
+  <div className="multimedia-container">
+    <h3>📹 Lesson Materials</h3>
+    <MultimediaViewer
+      key={lesson.id || lesson._id}
+      multimedia={lessonMultimedia}
+    />
+  </div>
+)}
 
             <div className="lesson-content">
               <p>{lesson.content}</p>
