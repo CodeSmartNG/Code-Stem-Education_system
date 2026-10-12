@@ -652,7 +652,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
           ) : (
             <div className="users-grid">
               {pendingTeachers.map(teacher => (
-                <div key={teacher.uid || teacher.id} className="user-card pending">
+                <div key={teacher.id || teacher.id} className="user-card pending">
                   <div className="user-header">
                     <div className="user-avatar">
                       {teacher.name?.charAt(0).toUpperCase() || '?'}
@@ -685,14 +685,14 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                   <div className="action-buttons">
                     <button 
                       className="btn-approve"
-                      onClick={() => handleApproveTeacher(teacher.uid || teacher.id)}
+                      onClick={() => handleApproveTeacher(teacher.id || teacher.id)}
                       disabled={loading}
                     >
                       ✅ Approve
                     </button>
                     <button 
                       className="btn-reject"
-                      onClick={() => handleRejectTeacher(teacher.uid || teacher.id)}
+                      onClick={() => handleRejectTeacher(teacher.id || teacher.id)}
                       disabled={loading}
                     >
                       ❌ Reject
@@ -728,7 +728,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
           ) : (
             <div className="users-grid">
               {approvedTeachers.map(teacher => (
-                <div key={teacher.uid || teacher.id} className="user-card approved">
+                <div key={teacher.id || teacher.id} className="user-card approved">
                   <div className="user-header">
                     <div className="user-avatar approved">
                       {teacher.name?.charAt(0).toUpperCase() || '?'}
@@ -767,7 +767,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                   <div className="action-buttons">
                     <button 
                       className="btn-dismiss"
-                      onClick={() => handleDismissTeacher(teacher.uid || teacher.id)}
+                      onClick={() => handleDismissTeacher(teacher.id || teacher.id)}
                       disabled={loading}
                     >
                       🚫 Dismiss
@@ -838,7 +838,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                 </thead>
                 <tbody>
                   {getFilteredUsers().map(user => (
-                    <tr key={user.uid || user.id} className="user-row">
+                    <tr key={user.id || user.id} className="user-row">
                       <td>
                         <div className="user-cell">
                           <div className="user-avatar small">
@@ -873,7 +873,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                           >
                             👁 View
                           </button>
-                          {user.uid !== currentUser?.uid && user.role !== 'admin' && (
+                          {user.id !== currentUser?.id && user.role !== 'admin' && (
                             <button 
                               className="btn-delete"
                               onClick={() => handleDeleteUser(user.uid || user.id)}
