@@ -18,7 +18,7 @@ exports.getNotifications = async (req, res) => {
 exports.getUnreadCount = async (req, res) => {
   try {
     const count = await Notification.countDocuments({
-      recipient: req.user.id,
+      recipient: req.user._id || req.user.id,
       isRead: false,
     });
     res.json({ count });
