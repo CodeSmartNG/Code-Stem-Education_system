@@ -120,25 +120,41 @@ logout: () => {
 },
 
   // ============================================
-  // USERS
-  // ============================================
+// USERS
+// ============================================
 
-  getUsers: () =>
-    apiCall('/users'),
+getUsers: () =>
+  apiCall('/users'),
 
-  getUserById: (id) =>
-    apiCall(`/users/${id}`),
+getUserById: (id) =>
+  apiCall(`/users/${id}`),
 
-  updateUser: (id, data) =>
-    apiCall(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    }),
+updateUser: (id, data) =>
+  apiCall(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
 
-  deleteUser: (id) =>
-    apiCall(`/users/${id}`, {
-      method: 'DELETE'
-    }),
+deleteUser: (id) =>
+  apiCall(`/users/${id}`, {
+    method: 'DELETE'
+  }),
+
+approveTeacher: (id) =>
+  apiCall(`/users/${id}/approve`, {
+    method: 'PATCH'
+  }),
+
+rejectTeacher: (id) =>
+  apiCall(`/users/${id}/reject`, {
+    method: 'PATCH'
+  }),
+
+dismissTeacher: (id) =>
+  apiCall(`/users/${id}/dismiss`, {
+    method: 'PATCH'
+  }),
+
 
 
   forgotPassword: (email) =>
