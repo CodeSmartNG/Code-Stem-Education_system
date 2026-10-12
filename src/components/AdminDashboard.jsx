@@ -685,14 +685,14 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                   <div className="action-buttons">
                     <button 
                       className="btn-approve"
-                      onClick={() => handleApproveTeacher(teacher.id || teacher.id)}
+                      onClick={() => handleApproveTeacher(teacher._id || teacher.id)}
                       disabled={loading}
                     >
                       ✅ Approve
                     </button>
                     <button 
                       className="btn-reject"
-                      onClick={() => handleRejectTeacher(teacher.id || teacher.id)}
+                      onClick={() => handleRejectTeacher(teacher._id || teacher.id)}
                       disabled={loading}
                     >
                       ❌ Reject
@@ -728,7 +728,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
           ) : (
             <div className="users-grid">
               {approvedTeachers.map(teacher => (
-                <div key={teacher.id || teacher.id} className="user-card approved">
+                <div key={teacher._id || teacher.id} className="user-card approved">
                   <div className="user-header">
                     <div className="user-avatar approved">
                       {teacher.name?.charAt(0).toUpperCase() || '?'}
@@ -767,7 +767,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                   <div className="action-buttons">
                     <button 
                       className="btn-dismiss"
-                      onClick={() => handleDismissTeacher(teacher.id || teacher.id)}
+                      onClick={() => handleDismissTeacher(teacher._id || teacher.id)}
                       disabled={loading}
                     >
                       🚫 Dismiss
@@ -873,15 +873,15 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                           >
                             👁 View
                           </button>
-                          {user.id !== currentUser?.id && user.role !== 'admin' && (
-                            <button 
-                              className="btn-delete"
-                              onClick={() => handleDeleteUser(user.uid || user.id)}
-                              disabled={loading}
-                            >
-                              🗑 Delete
-                            </button>
-                          )}
+    {user._id !== (currentUser?._id || currentUser?.id) && user.role !== 'admin' && (
+  <button 
+    className="btn-delete"
+    onClick={() => handleDeleteUser(user._id || user.id)}
+    disabled={loading}
+  >
+    🗑 Delete
+  </button>
+)}
                         </div>
                       </td>
                     </tr>
