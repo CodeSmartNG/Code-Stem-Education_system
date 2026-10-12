@@ -5,8 +5,8 @@
    ============================================ */
 .ai-floating-btn {
   position: fixed;
-  bottom: 96px;
-  right: 84px; /* Left of the chat button */
+  bottom: 170px;
+  right: 20px;
   width: 56px;
   height: 56px;
   border-radius: 18px;
