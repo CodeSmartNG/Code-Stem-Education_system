@@ -3,10 +3,12 @@ const Notification = require('../models/Notification');
 // GET /api/notifications — current user's notifications
 exports.getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipient: req.user.id })
+    const notifications = await Notification.find({
+      recipient: req.user._id || req.user.id,
+    })
       .sort({ createdAt: -1 })
       .limit(50);
-    res.json(notifications);
+    res.json({ success: true, notifications });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
