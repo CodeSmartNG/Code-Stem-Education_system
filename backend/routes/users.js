@@ -5,6 +5,90 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+
+// ============================================
+// APPROVE TEACHER (Admin only)
+// ============================================
+router.patch('/:id/approve', [auth, isAdmin], async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        isApproved: true,
+        approvedDate: new Date(),
+        status: 'approved',
+        updatedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    ).select('-password -verificationToken');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    console.log('✅ Teacher approved:', user.email);
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Approve teacher error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================
+// REJECT TEACHER (Admin only)
+// ============================================
+router.patch('/:id/reject', [auth, isAdmin], async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        isApproved: false,
+        status: 'rejected',
+        rejectedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    ).select('-password -verificationToken');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    console.log('❌ Teacher rejected:', user.email);
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Reject teacher error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ============================================
+// DISMISS TEACHER (Admin only)
+// ============================================
+router.patch('/:id/dismiss', [auth, isAdmin], async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        isApproved: false,
+        status: 'dismissed',
+        dismissedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    ).select('-password -verificationToken');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    console.log('🚫 Teacher dismissed:', user.email);
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Dismiss teacher error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 // ============================================
 // GET ALL USERS (Admin only)
 // ============================================
