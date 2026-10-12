@@ -528,8 +528,8 @@
   content: '';
   position: absolute;
   bottom: 0;
-  left: 12px;
-  right: 12px;
+  left: 8px;
+  right: 8px;
   height: 3px;
   background: #0ea5e9;
   border-radius: 3px 3px 0 0;
@@ -641,8 +641,9 @@
   }
 
   .app-nav-btn {
-    padding: 10px 14px;
-  }
+  padding: 8px 12px;
+  gap: 3px;
+}
 
   .app-nav-btn.active::after {
     left: 8px;
@@ -678,17 +679,17 @@
   }
 
   .app-nav-btn {
-    padding: 10px 12px;
-    gap: 6px;
-  }
+  padding: 8px 10px;
+  gap: 3px;
+}
 
-  .nav-icon {
-    font-size: 15px;
-  }
+.nav-icon {
+  font-size: 16px;
+}
 
-  .nav-label {
-    font-size: 11px;
-  }
+.nav-label {
+  font-size: 10px;
+}
 
   .user-dropdown-menu {
     right: -10px;
