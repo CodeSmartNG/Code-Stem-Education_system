@@ -1325,19 +1325,48 @@ try {
                   
                   
                   {newLessonForm.videoFile && (
-                    <div className="file-preview">
-                      <video controls style={{ maxWidth: '100%', maxHeight: '300px' }}>
-                        <source
-                          src={URL.createObjectURL(newLessonForm.videoFile)}
-                          type={newLessonForm.videoFile.type}
-                        />
-                      </video>
-                      <p className="file-details">
-                        File: {newLessonForm.videoFileName} • Size:{' '}
-                        {(newLessonForm.videoFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                  )}
+  <div className="file-preview">
+    <video controls style={{ maxWidth: '100%', maxHeight: '300px' }}>
+      <source
+        src={URL.createObjectURL(newLessonForm.videoFile)}
+        type={newLessonForm.videoFile.type}
+      />
+    </video>
+    <p className="file-details">
+      File: {newLessonForm.videoFileName} • Size:{' '}
+      {(newLessonForm.videoFile.size / (1024 * 1024)).toFixed(2)} MB
+    </p>
+
+    <button
+      type="button"
+      className="remove-video-btn"
+      onClick={() => {
+        setNewLessonForm((prev) => ({
+          ...prev,
+          videoFile: null,
+          videoFileName: '',
+          videoTitle: '',
+          videoDescription: '',
+        }));
+        const fileInput = document.getElementById('videoFile');
+        if (fileInput) fileInput.value = '';
+      }}
+      style={{
+        marginTop: 10,
+        padding: '8px 16px',
+        background: '#e53e3e',
+        color: 'white',
+        border: 'none',
+        borderRadius: 6,
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: 600,
+      }}
+    >
+      ❌ Remove Video
+    </button>
+  </div>
+)}
                 </div>
 
                 <div className="quiz-section">
