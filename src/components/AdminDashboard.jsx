@@ -83,14 +83,17 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
 
       // Get teacher wallets
       const wallets = {};
-      for (const teacher of approved) {
-        const wallet = await getTeacherWallet(teacher.uid);
-        wallets[teacher.uid] = {
-          ...wallet,
-          teacherId: teacher.uid,
-          teacherName: teacher.name || teacher.displayName || 'Unknown'
-        };
-      }
+     for (const teacher of approved) {
+  const teacherId = teacher._id || teacher.id;
+  if (!teacherId) continue;
+  
+  const wallet = await getTeacherWallet(teacherId);
+  wallets[teacherId] = {
+    ...wallet,
+    teacherId: teacherId,
+    teacherName: teacher.name || teacher.displayName || 'Unknown'
+  };
+}
       setTeacherWallets(wallets);
 
       // Get payment transactions
