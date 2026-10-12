@@ -652,7 +652,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
           ) : (
             <div className="users-grid">
               {pendingTeachers.map(teacher => (
-                <div key={teacher.id || teacher.id} className="user-card pending">
+                <div key={teacher._id || teacher.id} className="user-card pending">
                   <div className="user-header">
                     <div className="user-avatar">
                       {teacher.name?.charAt(0).toUpperCase() || '?'}
@@ -838,7 +838,7 @@ const AdminDashboard = ({ currentUser, setCurrentView }) => {
                 </thead>
                 <tbody>
                   {getFilteredUsers().map(user => (
-                    <tr key={user.id || user.id} className="user-row">
+                    <tr key={user._id || user.id} className="user-row">
                       <td>
                         <div className="user-cell">
                           <div className="user-avatar small">
