@@ -325,25 +325,65 @@ if (file.size > MAX_MB * 1024 * 1024) {
       return;
     }
 
-    // ✅ ONE request instead of N
-    const response = await apiCall('/courses/stats/overview');
-    console.log('📚 Teacher courses + stats loaded:', response?.courses?.length);
+    let coursesList = [];
+    let computedStats = null;
 
-    setCoursesState(response?.courses || []);
+    // ✅ Try fast batch endpoint first
+    try {
+      const response = await apiCall('/courses/stats/overview');
+      if (response?.success && Array.isArray(response.courses)) {
+        coursesList = response.courses;
+        computedStats = {
+          totalCourses: response.stats?.totalCourses || coursesList.length,
+          totalLessons: response.stats?.totalLessons || 0,
+          totalStudents: response.stats?.totalStudents || 0,
+        };
+        console.log('⚡ Fast stats loaded:', computedStats);
+      }
+    } catch (fastErr) {
+      console.warn('⚠️ Fast stats endpoint failed, using fallback:', fastErr.message);
+    }
 
-    setStats({
-      totalCourses: response?.stats?.totalCourses || 0,
-      totalLessons: response?.stats?.totalLessons || 0,
-      totalStudents: response?.stats?.totalStudents || 0,
-    });
+    // ✅ Fallback: old method if fast endpoint failed
+    if (!computedStats) {
+      const teacherCourses = await getCoursesByTeacher(currentUser.uid || currentUser.id);
+      coursesList = teacherCourses || [];
+
+      let totalLessons = 0;
+      let totalStudents = 0;
+      for (const course of coursesList) {
+        try {
+          const lessons = await getLessonsByCourse(course.id);
+          totalLessons += lessons.length;
+        } catch (e) {
+          // ignore single course failure
+        }
+        totalStudents += course.enrolledStudents || 0;
+      }
+
+      computedStats = {
+        totalCourses: coursesList.length,
+        totalLessons,
+        totalStudents,
+      };
+      console.log('🐢 Fallback stats computed:', computedStats);
+    }
+
+    setCoursesState(coursesList);
+    setStats(computedStats);
 
     const walletData = await getTeacherWallet(currentUser.uid || currentUser.id);
     setWallet(walletData);
   } catch (error) {
     console.error('Error loading data:', error);
+    // ✅ NEVER leave stats null — show zero instead of blocking the UI
+    setStats({ totalCourses: 0, totalLessons: 0, totalStudents: 0 });
+    setCoursesState([]);
   }
 };
 
+
+        
   const loadTeacherProfile = async () => {
     try {
       const currentUser = await getCurrentUser();
