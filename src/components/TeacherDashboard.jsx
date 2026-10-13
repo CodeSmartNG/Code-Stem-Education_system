@@ -317,38 +317,31 @@ if (file.size > MAX_MB * 1024 * 1024) {
   };
 
   const loadData = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser || !currentUser.uid) {
-        console.error('No user logged in');
-        return;
-      }
-
-      const teacherCourses = await getCoursesByTeacher(currentUser.uid);
-      console.log('📚 Teacher courses loaded:', teacherCourses?.length);
-      setCoursesState(teacherCourses || []);
-
-      let totalLessons = 0;
-      let totalStudents = 0;
-
-      for (const course of teacherCourses) {
-        const lessons = await getLessonsByCourse(course.id);
-        totalLessons += lessons.length;
-        totalStudents += course.enrolledStudents || 0;
-      }
-
-      setStats({
-        totalCourses: teacherCourses.length,
-        totalLessons,
-        totalStudents,
-      });
-
-      const walletData = await getTeacherWallet(currentUser.uid);
-      setWallet(walletData);
-    } catch (error) {
-      console.error('Error loading data:', error);
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      console.error('No user logged in');
+      return;
     }
-  };
+
+    // ✅ ONE request instead of N
+    const response = await apiCall('/courses/stats/overview');
+    console.log('📚 Teacher courses + stats loaded:', response?.courses?.length);
+
+    setCoursesState(response?.courses || []);
+
+    setStats({
+      totalCourses: response?.stats?.totalCourses || 0,
+      totalLessons: response?.stats?.totalLessons || 0,
+      totalStudents: response?.stats?.totalStudents || 0,
+    });
+
+    const walletData = await getTeacherWallet(currentUser.uid || currentUser.id);
+    setWallet(walletData);
+  } catch (error) {
+    console.error('Error loading data:', error);
+  }
+};
 
   const loadTeacherProfile = async () => {
     try {
