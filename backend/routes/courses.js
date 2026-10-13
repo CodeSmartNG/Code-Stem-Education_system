@@ -365,4 +365,62 @@ router.patch('/:id/publish', [auth, isTeacher], async (req, res) => {
   }
 });
 
+// ============================================
+// GET /api/courses/stats — teacher course stats
+// Returns courses with lesson counts in ONE query
+// ============================================
+router.get('/stats/overview', auth, async (req, res) => {
+  try {
+    let query = {};
+
+    if (req.user.role === 'teacher') {
+      query.teacherId = req.user._id;
+    } else if (req.user.role === 'student') {
+      query.isPublished = true;
+    }
+
+    const courses = await Course.find(query)
+      .select('title thumbnail isPublished enrolledStudents lessonIds createdAt teacherName')
+      .populate({
+        path: 'lessonIds',
+        select: '_id title isFree price',
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = courses.map((c) => ({
+      id: c._id.toString(),
+      _id: c._id.toString(),
+      title: c.title,
+      thumbnail: c.thumbnail,
+      isPublished: c.isPublished,
+      enrolledStudents: c.enrolledStudents || 0,
+      teacherName: c.teacherName,
+      lessonCount: c.lessonIds?.length || 0,
+      lessons: (c.lessonIds || []).map((l) => ({
+        id: l._id.toString(),
+        _id: l._id.toString(),
+        title: l.title,
+        isFree: l.isFree,
+        price: l.price,
+      })),
+    }));
+
+    const totalLessons = normalized.reduce((sum, c) => sum + c.lessonCount, 0);
+    const totalStudents = normalized.reduce((sum, c) => sum + c.enrolledStudents, 0);
+
+    res.json({
+      success: true,
+      courses: normalized,
+      stats: {
+        totalCourses: normalized.length,
+        totalLessons,
+        totalStudents,
+      },
+    });
+  } catch (error) {
+    console.error('Course stats error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 module.exports = router;
