@@ -64,5 +64,7 @@ const LessonSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
-
+lessonSchema.index({ courseId: 1, order: 1 });
+lessonSchema.index({ isFree: 1 });
+lessonSchema.index({ createdAt: -1 });
 module.exports = mongoose.model('Lesson', LessonSchema);
