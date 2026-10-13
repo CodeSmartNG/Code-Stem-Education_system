@@ -120,5 +120,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
     throw error;
   }
 };
-
+// (only add email index if email isn't already unique in the schema)
+userSchema.index({ role: 1, isApproved: 1 });
+userSchema.index({ createdAt: -1 });
 module.exports = mongoose.model('User', userSchema);
