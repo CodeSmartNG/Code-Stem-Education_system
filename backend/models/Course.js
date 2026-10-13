@@ -69,5 +69,7 @@ CourseSchema.virtual('lessonsCount').get(function() {
 CourseSchema.virtual('studentsCount').get(function() {
   return this.enrolledStudentIds?.length || this.enrolledStudents || 0;
 });
-
+courseSchema.index({ teacherId: 1, createdAt: -1 });
+courseSchema.index({ isPublished: 1, createdAt: -1 });
+courseSchema.index({ teacherId: 1, isPublished: 1 });
 module.exports = mongoose.model('Course', CourseSchema);
