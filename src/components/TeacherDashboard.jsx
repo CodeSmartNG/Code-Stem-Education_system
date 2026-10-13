@@ -26,6 +26,7 @@ import {
   uploadFileToFirebase,
   uploadFile,
   createQuiz,
+  apiCall,
 } from '../utils/storageAPI';
 import './TeacherDashboard.css';
 
