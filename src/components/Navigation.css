@@ -469,15 +469,17 @@
 .app-navigation {
   background: #ffffff;
   border-bottom: 1px solid #eef0f3;
-  padding: 0 20px;
+  padding: 0; /* ✅ Changed from 0 20px to 0 */
   position: sticky;
   top: 61px;
   z-index: 998;
+  width: 100%;
 }
 
 .nav-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%; /* ✅ Fill the width */
+  margin: 0;
+  /* Removed max-width: 1400px; */
 }
 
 .app-nav-links {
@@ -485,7 +487,8 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  gap: 4px;
+  gap: 0; /* ✅ Removed gap */
+  justify-content: space-around; /* ✅ Spread items evenly across full width */
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -501,7 +504,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 8px 14px;
+  padding: 8px 10px; /* Slightly reduced padding to fit more comfortably */
   background: transparent;
   border: none;
   color: #64748b;
@@ -512,6 +515,7 @@
   transition: all 0.2s;
   position: relative;
   white-space: nowrap;
+  flex: 1; /* ✅ Make each button grow equally to fill the bar */
 }
 
 .app-nav-btn:hover {
@@ -557,7 +561,7 @@
 
 .logout-btn {
   color: #dc2626;
-  margin-left: auto;
+  /* ✅ Removed margin-left: auto; */
 }
 
 .logout-btn:hover {
