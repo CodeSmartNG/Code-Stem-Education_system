@@ -1,5 +1,83 @@
 /* AdminDashboard.css — PREMIUM UI */
 
+
+/* ============================================
+   MOBILE TABLE FIX (No more left/right scrolling)
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Remove the horizontal scroll container */
+  .users-table-container {
+    overflow-x: hidden;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Hide the table headers (ROLE, STATUS, etc.) */
+  .users-table thead {
+    display: none;
+  }
+
+  /* Make the table, rows, and cells behave like blocks */
+  .users-table, 
+  .users-table tbody, 
+  .users-table tr, 
+  .users-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Style each row as a card */
+  .users-table tr {
+    margin-bottom: 16px;
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    padding: 16px;
+  }
+
+  /* Style each cell to align text nicely */
+  .users-table td {
+    padding: 8px 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    white-space: normal;
+  }
+
+  /* The first cell (User Info) gets full width and a bottom border */
+  .users-table td:first-child {
+    display: block;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* The last cell (Actions) goes at the bottom */
+  .users-table td:last-child {
+    display: block;
+    margin-top: 12px;
+    text-align: left;
+  }
+
+  /* Make the action buttons take full width on mobile */
+  .table-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .table-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
 :root {
   --primary: #6366f1;
   --primary-hover: #4f46e5;
