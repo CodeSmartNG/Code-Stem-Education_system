@@ -1,83 +1,5 @@
-/* AdminDashboard.css — PREMIUM UI */
+/* AdminDashboard.css — PREMIUM UI (With Mobile Table Fix) */
 
-
-/* ============================================
-   MOBILE TABLE FIX (No more left/right scrolling)
-   ============================================ */
-
-@media (max-width: 768px) {
-  /* Remove the horizontal scroll container */
-  .users-table-container {
-    overflow-x: hidden;
-    background: transparent;
-    box-shadow: none;
-    border: none;
-  }
-
-  /* Hide the table headers (ROLE, STATUS, etc.) */
-  .users-table thead {
-    display: none;
-  }
-
-  /* Make the table, rows, and cells behave like blocks */
-  .users-table, 
-  .users-table tbody, 
-  .users-table tr, 
-  .users-table td {
-    display: block;
-    width: 100%;
-  }
-
-  /* Style each row as a card */
-  .users-table tr {
-    margin-bottom: 16px;
-    background: var(--card-bg);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    padding: 16px;
-  }
-
-  /* Style each cell to align text nicely */
-  .users-table td {
-    padding: 8px 0;
-    border: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: right;
-    white-space: normal;
-  }
-
-  /* The first cell (User Info) gets full width and a bottom border */
-  .users-table td:first-child {
-    display: block;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 12px;
-    margin-bottom: 12px;
-  }
-
-  /* The last cell (Actions) goes at the bottom */
-  .users-table td:last-child {
-    display: block;
-    margin-top: 12px;
-    text-align: left;
-  }
-
-  /* Make the action buttons take full width on mobile */
-  .table-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .table-actions button {
-    width: 100%;
-    justify-content: center;
-  }
-}
 :root {
   --primary: #6366f1;
   --primary-hover: #4f46e5;
@@ -279,7 +201,6 @@
   flex-shrink: 0;
 }
 
-/* Specific colors for stat icons */
 .stat-card-students .stat-icon { background: #e0e7ff; color: var(--primary); }
 .stat-card-teachers .stat-icon { background: #ecfdf5; color: var(--success); }
 .stat-card-earnings .stat-icon { background: #fffbeb; color: var(--warning); }
@@ -464,13 +385,8 @@
   box-shadow: var(--shadow-md);
 }
 
-.user-card.pending {
-  border-top: 4px solid var(--warning);
-}
-
-.user-card.approved {
-  border-top: 4px solid var(--success);
-}
+.user-card.pending { border-top: 4px solid var(--warning); }
+.user-card.approved { border-top: 4px solid var(--success); }
 
 .user-header {
   display: flex;
@@ -493,16 +409,8 @@
   flex-shrink: 0;
 }
 
-.user-avatar.approved {
-  background: linear-gradient(135deg, var(--success), #059669);
-}
-
-.user-avatar.small {
-  width: 40px;
-  height: 40px;
-  font-size: 1rem;
-  border-radius: var(--radius-sm);
-}
+.user-avatar.approved { background: linear-gradient(135deg, var(--success), #059669); }
+.user-avatar.small { width: 40px; height: 40px; font-size: 1rem; border-radius: var(--radius-sm); }
 
 .user-info h4 {
   margin: 0;
@@ -511,18 +419,8 @@
   font-weight: 800;
 }
 
-.user-email {
-  color: var(--text-muted);
-  margin: 4px 0;
-  font-size: 0.9em;
-}
-
-.user-specialization {
-  color: var(--primary);
-  font-weight: 600;
-  margin: 4px 0;
-  font-size: 0.9em;
-}
+.user-email { color: var(--text-muted); margin: 4px 0; font-size: 0.9em; }
+.user-specialization { color: var(--primary); font-weight: 600; margin: 4px 0; font-size: 0.9em; }
 
 /* Role Badges */
 .role-badge {
@@ -554,18 +452,8 @@
   border: 1px dashed var(--border-color);
 }
 
-.user-meta {
-  display: flex;
-  gap: 24px;
-  margin: 16px 0;
-  flex-wrap: wrap;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+.user-meta { display: flex; gap: 24px; margin: 16px 0; flex-wrap: wrap; }
+.meta-item { display: flex; flex-direction: column; gap: 4px; }
 
 .meta-label {
   font-size: 0.75em;
@@ -575,11 +463,7 @@
   font-weight: 700;
 }
 
-.meta-value {
-  color: var(--text-main);
-  font-weight: 600;
-  font-size: 0.95em;
-}
+.meta-value { color: var(--text-main); font-weight: 600; font-size: 0.95em; }
 
 /* ============================================
    BUTTONS
@@ -588,7 +472,7 @@
 .action-buttons {
   display: flex;
   gap: 10px;
-  margin-top: auto; /* Pushes buttons to bottom */
+  margin-top: auto;
   padding-top: 16px;
   flex-wrap: wrap;
 }
@@ -664,12 +548,7 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.modal-header h3 {
-  margin: 0;
-  color: var(--text-main);
-  font-size: 1.3em;
-  font-weight: 800;
-}
+.modal-header h3 { margin: 0; color: var(--text-main); font-size: 1.3em; font-weight: 800; }
 
 .close-btn {
   background: #f1f5f9;
@@ -686,14 +565,9 @@
   transition: all 0.2s;
 }
 
-.close-btn:hover {
-  background: #fee2e2;
-  color: var(--danger);
-}
+.close-btn:hover { background: #fee2e2; color: var(--danger); }
 
-.modal-body {
-  padding: 24px;
-}
+.modal-body { padding: 24px; }
 
 .detail-row {
   display: flex;
@@ -703,21 +577,9 @@
   border-bottom: 1px dashed var(--border-color);
 }
 
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-row label {
-  font-weight: 700;
-  color: var(--text-muted);
-  font-size: 0.9em;
-}
-
-.detail-row span {
-  color: var(--text-main);
-  font-weight: 600;
-  text-align: right;
-}
+.detail-row:last-child { border-bottom: none; }
+.detail-row label { font-weight: 700; color: var(--text-muted); font-size: 0.9em; }
+.detail-row span { color: var(--text-main); font-weight: 600; text-align: right; }
 
 .modal-footer {
   padding: 20px 24px;
@@ -738,61 +600,109 @@
   box-shadow: var(--shadow-glow);
 }
 
-.btn-close:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.4);
-}
+.btn-close:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(99, 102, 241, 0.4); }
 
 /* ============================================
    EMPTY STATES & LOADING
    ============================================ */
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--text-muted);
-}
-
-.empty-icon {
-  font-size: 4em;
-  margin-bottom: 16px;
-  opacity: 0.8;
-}
-
-.empty-state h3 {
-  margin: 0 0 8px 0;
-  color: var(--text-main);
-  font-weight: 800;
-  font-size: 1.3em;
-}
-
-.empty-state p {
-  margin: 0;
-  font-size: 1rem;
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-
-@media (max-width: 768px) {
-  .admin-dashboard { padding: 16px; }
-  .admin-header { padding: 24px; flex-direction: column; text-align: center; }
-  .admin-header h1 { font-size: 1.8em; }
-  .quick-actions { flex-direction: column; }
-  .action-btn { width: 100%; justify-content: center; }
-  .stats-grid { grid-template-columns: 1fr; }
-  .section-header { flex-direction: column; align-items: flex-start; }
-  .users-grid { grid-template-columns: 1fr; }
-  .users-table-container { overflow-x: auto; }
-  .action-buttons { flex-direction: column; }
-  .modal-content { width: 100%; margin: 0; }
-  .detail-row { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .detail-row span { text-align: left; }
-}
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-icon { font-size: 4em; margin-bottom: 16px; opacity: 0.8; }
+.empty-state h3 { margin: 0 0 8px 0; color: var(--text-main); font-weight: 800; font-size: 1.3em; }
+.empty-state p { margin: 0; font-size: 1rem; }
 
 /* Custom Scrollbar for the whole page */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ============================================
+   MOBILE RESPONSIVE FIXES (Table to Cards)
+   ============================================ */
+
+@media (max-width: 768px) {
+  .admin-dashboard { padding: 16px; }
+  
+  .admin-header { padding: 24px; flex-direction: column; text-align: center; }
+  .admin-header h1 { font-size: 1.8em; }
+  
+  .quick-actions { flex-direction: column; }
+  .action-btn { width: 100%; justify-content: center; }
+  
+  .stats-grid { grid-template-columns: 1fr; }
+  .section-header { flex-direction: column; align-items: flex-start; }
+  .users-grid { grid-template-columns: 1fr; }
+  .action-buttons { flex-direction: column; }
+  
+  .modal-content { width: 100%; margin: 0; }
+  .detail-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .detail-row span { text-align: left; }
+
+  /* --- TABLE TO CARD FIX --- */
+  .users-table-container {
+    overflow-x: hidden;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Hide headers */
+  .users-table thead { display: none; }
+
+  /* Make table elements behave like blocks */
+  .users-table, .users-table tbody, .users-table tr, .users-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Style rows as cards */
+  .users-table tr {
+    margin-bottom: 16px;
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    padding: 16px;
+  }
+
+  /* Style cells inside the card */
+  .users-table td {
+    padding: 8px 0;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    white-space: normal; /* Stops dates from wrapping vertically */
+  }
+
+  /* First cell (User info) gets the full width at the top */
+  .users-table td:first-child {
+    display: block;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* Last cell (Actions) goes at the very bottom */
+  .users-table td:last-child {
+    display: block;
+    margin-top: 12px;
+    text-align: left;
+  }
+
+  /* Stack the action buttons nicely */
+  .table-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .table-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
