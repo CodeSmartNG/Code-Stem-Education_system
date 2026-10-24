@@ -2,27 +2,227 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- ✅ FIXED: Remove the GitHub Pages path -->
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <meta name="theme-color" content="#4f46e5" />
+    
+    <!-- ✅ PWA Manifest & Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    
+    <!-- ✅ Mobile & PWA Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#6366f1" />
     <meta name="description" content="CodeSmartNG STEM - Interactive STEM Education Platform" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CodeSmartNG" />
 
     <title>CodeSmartNG STEM - Interactive STEM Education Platform</title>
 
     <style>
-      /* Your existing styles - keep as is */
+      /* ============================================
+         PREMIUM LOADING SCREEN STYLES
+         ============================================ */
+      :root {
+        --primary: #6366f1;
+        --secondary: #8b5cf6;
+        --bg-dark: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-dark);
+        overflow: hidden;
+      }
+
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        z-index: 9999;
+      }
+
+      /* Floating Particles Background */
+      .loading-particles {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        z-index: 1;
+      }
+
+      .particle {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: rgba(139, 92, 246, 0.4);
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+        animation: float 8s infinite ease-in-out;
+      }
+
+      .particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+      .particle:nth-child(2) { left: 80%; top: 15%; animation-delay: 1s; width: 12px; height: 12px; background: rgba(99, 102, 241, 0.5); }
+      .particle:nth-child(3) { left: 20%; top: 80%; animation-delay: 2s; }
+      .particle:nth-child(4) { left: 70%; top: 70%; animation-delay: 0.5s; width: 6px; height: 6px; }
+      .particle:nth-child(5) { left: 50%; top: 10%; animation-delay: 3s; }
+      .particle:nth-child(6) { left: 85%; top: 50%; animation-delay: 1.5s; }
+      .particle:nth-child(7) { left: 15%; top: 50%; animation-delay: 2.5s; width: 10px; height: 10px; }
+      .particle:nth-child(8) { left: 90%; top: 85%; animation-delay: 0.8s; }
+      .particle:nth-child(9) { left: 40%; top: 90%; animation-delay: 3.5s; }
+      .particle:nth-child(10) { left: 5%; top: 95%; animation-delay: 1.2s; width: 14px; height: 14px; background: rgba(139, 92, 246, 0.3); }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+        50% { transform: translateY(-40px) scale(1.2); opacity: 1; }
+      }
+
+      /* Glassmorphism Loading Card */
+      .loading-container {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 48px 32px;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+        animation: slideUpFade 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      @keyframes slideUpFade {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Loading Icon */
+      .loading-icon {
+        font-size: 56px;
+        margin-bottom: 24px;
+        animation: pulseIcon 2s infinite ease-in-out;
+      }
+
+      @keyframes pulseIcon {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5)); }
+        50% { transform: scale(1.1); filter: drop-shadow(0 0 25px rgba(139, 92, 246, 0.8)); }
+      }
+
+      /* Modern Dual-Ring Spinner */
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary);
+        border-right-color: var(--secondary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 24px;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Typography */
+      .loading-title {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #a78bfa, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .loading-subtitle {
+        font-size: 14px;
+        color: #94a3b8;
+        font-weight: 500;
+        margin-bottom: 16px;
+      }
+
+      /* Bouncing Dots */
+      .loading-dots {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 32px;
+      }
+
+      .loading-dots span {
+        color: var(--primary);
+        font-size: 24px;
+        line-height: 1;
+        animation: bounce 1.4s infinite ease-in-out both;
+      }
+
+      .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+      @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); opacity: 0; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+
+      /* Shimmering Progress Bar */
+      .loading-progress {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 99px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        position: relative;
+      }
+
+      .loading-progress-bar {
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        border-radius: 99px;
+        animation: indeterminateProgress 1.5s infinite ease-in-out;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+
+      @keyframes indeterminateProgress {
+        0% { left: -50%; width: 50%; }
+        50% { width: 70%; }
+        100% { left: 100%; width: 30%; }
+      }
+
+      .loading-version {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
     </style>
   </head>
   <body>
     <!-- React Application Root -->
     <div id="root">
-      <!-- Initial Loading Screen -->
+      <!-- Premium Initial Loading Screen -->
       <div class="loading-screen">
+        
+        <!-- Floating Background Particles -->
         <div class="loading-particles">
           <div class="particle"></div>
           <div class="particle"></div>
@@ -36,25 +236,30 @@
           <div class="particle"></div>
         </div>
 
+        <!-- Main Loading Card -->
         <div class="loading-container">
-          <div class="loading-icon">📚</div>
+          <div class="loading-icon">🎓</div>
           <div class="loading-spinner"></div>
-          <h1 class="loading-title">CodeSmartNG STEM</h1>
-          <p class="loading-subtitle">Loading your learning experience...</p>
+          
+          <h1 class="loading-title">CodeSmartNG</h1>
+          <p class="loading-subtitle">Preparing your learning experience...</p>
+          
           <div class="loading-dots">
             <span>.</span>
             <span>.</span>
             <span>.</span>
           </div>
+          
           <div class="loading-progress">
             <div class="loading-progress-bar"></div>
           </div>
-          <p class="loading-version">v1.0.0 • STEM Education Platform</p>
+          
+          <p class="loading-version">v1.0.0 • STEM Platform</p>
         </div>
       </div>
     </div>
 
-    <!-- ✅ Vite will inject the correct script during build -->
+    <!-- ✅ Vite entry point -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
