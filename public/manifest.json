@@ -1,19 +1,31 @@
 {
   "short_name": "CodeSmartNG",
   "name": "CodeSmartNG STEM Platform",
-  "description": "Learn any skill. Teach anything. Nigeria's premier STEM education platform.",
+  "description": "Learn any skill. Teach anything.",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
